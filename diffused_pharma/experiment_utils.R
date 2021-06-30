@@ -16,6 +16,7 @@ run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, alpha=
   }
   T_samples <-mclapply(1:n_simulations, generate_T_sample, mc.cores = numCores)
   T_samples = unlist(T_samples, use.names=FALSE)
+
   emp_quantile = quantile(T_samples, alpha)
   return(list(rejected = emp_quantile < T_statistic(estimated_params_H1)))
 }
