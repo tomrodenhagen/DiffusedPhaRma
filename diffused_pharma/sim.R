@@ -8,11 +8,20 @@ next_step_sde = function(drift, diffusion, t, state, u ,params, h)
 }
 library(tidyr)
 get_t_grid = function(t_start, t_end, n_samples, h, list_of_dosis)
-{
-  output_samples = seq(t_start, t_end, length.out = n_samples)
+{ 
+  if(length(n_samples) > 1)
+  { 
+    output_samples = n_samples
+    
+  }
+  else
+  { 
+    output_samples = seq(t_start, t_end,length.out=n_samples)
+  }
   simulation_samples = seq(t_start, t_end, h)
   dosis_samples = c()
   rate = c()
+  
   for(dosis in list_of_dosis)
   {
     dosis_samples = c(dosis_samples, dosis$start)
@@ -26,7 +35,6 @@ get_t_grid = function(t_start, t_end, n_samples, h, list_of_dosis)
                                  "D" = rep(NA, length(output_samples)),
                                  "D_sample" = rep(FALSE, length(output_samples))               
                                  )
-  
   simulation_samples_df = data.frame("t" = simulation_samples, 
                                  "output" = rep(FALSE, length(simulation_samples)),
                                  "D" = rep(NA, length(simulation_samples)),
@@ -66,17 +74,12 @@ simulate_model <- function(drift, diffusion, params, t_start, t_end, n_samples=2
   { t = data[i, "t"]
     h = data[i + 1, "t"] - data[i, "t"] 
     path = c(path, Conc + rnorm(1, 0, params$sigma_eps**0.5))
-    Conc = next_step_sde(drift, diffusion,  t, Conc, data[i,"D"], params, h) 
-    
+    Conc = max(next_step_sde(drift, diffusion,  t, Conc, data[i,"D"], params, h), 0) 
   }
  
   data[["ConcObserved"]] = path
   data[["ConcObserved"]][data[["D_sample"]]] = NaN
   data = data[data[["D_sample"]] | data[["output"]],]
-  attr(data, "t_start") = t_start
-  attr(data, "t_end") = t_end
-  attr(data, "n_samples") = n_samples
-  attr(data, "dosis") = dosis
   return(data)
 }
 
