@@ -19,8 +19,8 @@ T_statistic = function(estimate){return(estimate$sigma_tau)[0]}
 
 sample_params = function()
 { V = 50
-  Km = 1000 # mg per liter
-  Vmax = 100
+  Km = 4 # mg per liter
+  Vmax = 8
   CL = Vmax / Km # mg per day
   Conc0 =0
   return(list("sigma_eps"=0.001, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
@@ -45,6 +45,15 @@ get_samples = function(n)
   return(samples)
 }
 
+get_samples = function(n)
+{ samples = c(0.1, 0.2, 0.3, 0.4, 0.5)
+for(i in 1:n)
+{
+  samples = c(samples, c(i + 0.1, i - 0.1 ))
+}
+return(samples)
+}
+
 n_days = 15
 
 
@@ -58,8 +67,13 @@ design = list(t_start=0, t_end = n_days, n_samples=get_samples(n_days), dosis = 
 H0_drift =function(t, state, u, params){return(-params$CL * state + u / params$V) }
 H1_drift =function(t, state, u, params){return(-params$CL * params$Km / (params$Km + state) * state + u / params$V) }
 
-rec = run_simulation_study(H0_drift,
+rec = run_simulation_study(H1_drift,
                                          diffusion = function(t, state, u , params){return(0)},
-                                         model_H0, model_H1, T_statistic, sample_params, design, 10,100, 0.05 )
+                                         model_H0, model_H1, T_statistic, sample_params, design, 500,500, 0.05 )
               
+eval_simulation(rec, "test")
+rec = run_simulation_study(H1_drift,
+                           diffusion = function(t, state, u , params){return(0)},
+                           model_H0, model_H1, T_statistic, sample_params, design, 10,100, 0.05 )
+
 eval_simulation(rec, "test")

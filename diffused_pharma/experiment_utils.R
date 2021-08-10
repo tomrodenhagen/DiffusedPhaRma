@@ -1,8 +1,9 @@
 source("diffused_pharma/fit.R")
 source("diffused_pharma/sim.R")
 library(parallel)
+library(jsonlite)
 
-run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design, alpha=0.95,h=0.1)
+run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design, alpha=0.05,h=0.1)
 { 
   estimated_params_H0 = model_H0$estimate(data)
 
@@ -19,7 +20,6 @@ run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design
   generate_T_sample = function(dummy)
   {   
       data_sim = model_H0$simulate(estimated_params_H0, design$t_start, design$t_end,design$n_samples, h, design$dosis)
-      plot(data_sim[["t"]], data_sim[["ConcObserved"]])
       estimate_sim = model_H1$estimate(data_sim)
       
       return(T_statistic(estimate_sim))		
@@ -27,17 +27,15 @@ run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design
   T_samples <-mclapply(1:n_simulations, generate_T_sample, mc.cores = numCores)
   T_samples = unlist(T_samples, use.names=FALSE)
   emp_quantile = quantile(T_samples, 1 - alpha)
-  print(emp_quantile)
-  print(T_statistic(estimated_params_H1))
   return(list(rejected = emp_quantile < T_statistic(estimated_params_H1)))
 }
-visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design,h)
+visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design,h,path)
 {
   sampled_params = sample_params()
   data_obs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
   data_unobs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end,
                               1000, h=h, design$dosis)
-  
+  jpeg(file=path)
   plot(data_obs[["t"]], data_obs[["ConcObserved"]])
   lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green")
   estimated_params_H0 = model_H0$estimate(data_obs)
@@ -48,12 +46,13 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
   data_H1 = model_H1$simulate(estimated_params_H1, design$t_start, design$t_end,design$n_samples,  h=h, design$dosis)
   lines(data_H0[["t"]], data_H0[["ConcObserved"]], pch=2, col="red")
   lines(data_H1[["t"]], data_H1[["ConcObserved"]], pch=3, col="blue")
+  dev.off()
   
 }
 library(progress)
 run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, n_param_samples, n_simulations, h=0.1)
 { 
-  visualize_setting(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design,h)
+  
   rec <- as.data.frame(matrix(0, ncol = length(sample_params()), nrow = n_param_samples))
   res_vec = c()
   names(rec) = names(sample_params())
@@ -73,9 +72,13 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   return(rec)
  
 }
-eval_simulation = function(rec, name )
+eval_simulation = function(rec, path, name )
 { 
-  print(sprintf("Percentages of rejected tests: %s", mean(rec$test_rejected) ) )
+  res_evaluated = ("Percentages of rejected tests"=mean(rec$test_rejected) ) 
+  save(rec, file= file.path(path, paste(name , "_complete_res.csv") ) )
+  res_evaluated <- toJSON(res_evaluated)
+  write(res_evaluated, file.path(path,paste(name , "_eval.csv")))
+ 
   for(param in colnames(rec))
   {
     if(param=="sigma_eps" | param=="test_rejected")
@@ -85,5 +88,51 @@ eval_simulation = function(rec, name )
     #plot(ksmooth(rec[[param]], rec[["test_rejected"]]),title=param,xlab=param,ylab="test_rej")
   }
 }
+run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Masterarbeit", n_simulations = 500, n_samples=500, alpha = 0.05, h=0.02, fresh=TRUE)
+{ scenario_folder = file.path(path, scenario$name)
+  if(dir.exists(scenario_folder))
+  { if(fresh)
+    {
+      unlink(scenario_folder)
+      dir.create(scenario_folder)
+    }
+  } else
+  {
+    dir.create(scenario_folder)
+  }
+
+  
+  #some standart parameters, we might change that at a later point
+  diffusion = function(t, state, u , params){return(0)}
+  #Visualize 
+  visualize_setting(scenario$H0_drift,
+                    diffusion, 
+                    scenario$model_H0, 
+                    scenario$model_H1,
+                    scenario$T_statistic,
+                    scenario$sample_params,
+                    scenario$design,
+                    h, 
+                    file.path(scenario_folder, "vis.png") )
+  #Type 1 Error
+  res_type_1 = run_simulation_study(scenario$H0_drift,
+                             diffusion,
+                             scenario$model_H0, 
+                             scenario$model_H1, 
+                             scenario$T_statistic, 
+                             scenario$sample_params, 
+                             scenario$design, n_simulations, n_samples, alpha)
+  eval_simulation(res_type_1, scenario_folder, "typ1_res")
+  #Type 2 error
+  res_type_2 = run_simulation_study(scenario$H1_drift,
+                                    diffusion,
+                                    scenario$model_H0, 
+                                    scenario$model_H1, 
+                                    scenario$T_statistic, 
+                                    scenario$sample_params, 
+                                    scenario$design, n_simulations, n_samples, alpha)
+  eval_simulation(res_type_2, scenario_folder, "typ2_res")
+}
+  
 
 
