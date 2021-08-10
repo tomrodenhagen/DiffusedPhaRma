@@ -75,9 +75,9 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
 eval_simulation = function(rec, path, name )
 { 
   res_evaluated = ("Percentages of rejected tests"=mean(rec$test_rejected) ) 
-  save(rec, file= file.path(path, paste(name , "_complete_res.csv") ) )
+  save(rec, file= file.path(path, paste(name , "complete_res.csv", sep = "_") ) )
   res_evaluated <- toJSON(res_evaluated)
-  write(res_evaluated, file.path(path,paste(name , "_eval.csv")))
+  write(res_evaluated, file.path(path,paste(name , "eval.csv", sep = "_")))
  
   for(param in colnames(rec))
   {
