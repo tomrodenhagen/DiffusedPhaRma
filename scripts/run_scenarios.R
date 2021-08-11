@@ -3,7 +3,7 @@ source("diffused_pharma/experiment_utils.R")
 #Some script params
 test = TRUE
 local = TRUE
-n_days = 10
+n_days = 15
 #Some base arguments
 
 #Models to Fit
@@ -28,6 +28,16 @@ H1_drift =function(t, state, u, params){return(-params$CL * params$Km / (params$
 
 
 #Dosing and design
+
+get_n_dosis = function(n, d)
+{ dosis = list()
+for(i in 0:n)
+{
+  dosis[[paste0("element", i)]] = bolus_dosis(i , d, eps=0.01)
+}
+return(dosis)
+}
+
 get_samples = function(n)
 { samples = c(0.1, 0.2, 0.3, 0.4, 0.5)
 for(i in 1:n)
@@ -43,23 +53,57 @@ design = list(t_start=0, t_end = n_days, n_samples=get_samples(n_days), dosis = 
 sample_params = function()
 { V = 50
   Km = 4 # mg per liter
-  Vmax = 8
+  Vmax = 7
   CL = Vmax / Km # mg per day
   Conc0 =0
   return(list("sigma_eps"=0.001, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
+}
+sample_params_low_Vmax = function()
+{ V = 50
+Km = 4 # mg per liter
+Vmax = 6
+CL = Vmax / Km # mg per day
+Conc0 =0
+return(list("sigma_eps"=0.001, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
+}
+
+sample_params_high_Vmax = function()
+{ V = 50
+Km = 4 # mg per liter
+Vmax = 8
+CL = Vmax / Km # mg per day
+Conc0 =0
+return(list("sigma_eps"=0.001, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
+}
+sample_params_high_noise = function()
+{ V = 50
+Km = 4 # mg per liter
+Vmax = 7
+CL = Vmax / Km # mg per day
+Conc0 =0
+return(list("sigma_eps"=0.01, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
 }
 
 scenario_base = list(name="base",
                      model_H0=model_H0,
                      model_H1=model_H1,
                      design = design,
+                     sample_params=sample_params,
+                     T_statistic=T_statistic,
+                     H0_drift=H0_drift,
+                     H1_drift=H1_drift)
+scenario_high_noise = list(name="high_noise",
+                     model_H0=model_H0,
+                     model_H1=model_H1,
+                     design = design,
+                     sample_params=sample_params_high_noise,
                      T_statistic=T_statistic,
                      H0_drift=H0_drift,
                      H1_drift=H1_drift)
 
 if(test)
 {
-  n_simulations= 10
+  n_simulations= 50
   n_samples = 50
 } else
 {
@@ -69,7 +113,7 @@ if(test)
 }
 if(local)
 {
-  path = "C:/Users/roden/Dropbox/Masterarbeit"
+  path = "C:/Users/roden/Documents/data"
 } else
 {
   path = " "
@@ -77,6 +121,6 @@ if(local)
 scenarios = list(scenario_base)
 for(scenario in scenarios)
 {
-  run_complete_scenario(scenario, path, n_simulations, n_samples, alpha = 0.05, h=0.02)
+  run_complete_scenario(scenario, path, n_simulations, n_samples, alpha = 0.05, h=0.02,TRUE)
 }
 

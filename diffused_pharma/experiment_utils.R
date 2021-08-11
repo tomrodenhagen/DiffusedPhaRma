@@ -29,23 +29,51 @@ run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design
   emp_quantile = quantile(T_samples, 1 - alpha)
   return(list(rejected = emp_quantile < T_statistic(estimated_params_H1)))
 }
-visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design,h,path)
+visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, h, path, name, draw_vmax=FALSE)
 {
   sampled_params = sample_params()
   data_obs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
   data_unobs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end,
                               1000, h=h, design$dosis)
-  jpeg(file=path)
-  plot(data_obs[["t"]], data_obs[["ConcObserved"]])
-  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green")
   estimated_params_H0 = model_H0$estimate(data_obs)
   estimated_params_H1 = model_H1$estimate(data_obs)
-  print(estimated_params_H0)
-  print(estimated_params_H1)
-  data_H0 = model_H0$simulate(estimated_params_H0, design$t_start, design$t_end,design$n_samples,  h=h, design$dosis)
-  data_H1 = model_H1$simulate(estimated_params_H1, design$t_start, design$t_end,design$n_samples,  h=h, design$dosis)
+  pathH0 = file.path(path, paste(name,"visH0.png",sep="_"))
+  jpeg(file=pathH0)
+  plot(data_obs[["t"]], data_obs[["ConcObserved"]],
+       main="Sample experiment",
+       ylab="Drug concentration in mg /l",
+       xlab="time in days", pch=19,col="blue",cex=1.5) 
+  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green")
+  
+  
+  data_H0 = model_H0$simulate(estimated_params_H0, design$t_start, design$t_end,300,  h=h, design$dosis)
   lines(data_H0[["t"]], data_H0[["ConcObserved"]], pch=2, col="red")
+  legend( x= "bottomright", legend=c("Observed points", "True", "Predicted from Model H0"),
+  col=c("blue","green", "red"), lty=1:2, cex=1,pch=19)
+  if(draw_vmax)
+    {
+    abline(h=sampled_params$Vmax, col="brown")
+    }
+  dev.off()
+  
+  pathH1 = file.path(path, paste(name,"visH1.png",sep="_"))
+  jpeg(file=pathH1)
+  plot(data_obs[["t"]], data_obs[["ConcObserved"]],
+       main="Sample experiment",
+       ylab="Drug concentration in mg /l",
+       xlab="time in days", pch=19,col="blue",cex=1.5) 
+  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green")
+ 
+ 
+  data_H1 = model_H1$simulate(estimated_params_H1, design$t_start, design$t_end,300,  h=h, design$dosis)
   lines(data_H1[["t"]], data_H1[["ConcObserved"]], pch=3, col="blue")
+  if(draw_vmax)
+  {
+    abline(h=sampled_params$Vmax, col="brown")
+  }
+  legend( x= "bottomright", legend=c("Observed points", "True", "Predicted from Model H1"),
+          col=c("blue","green", "blue"), lty=1:2, cex=1)
+  
   dev.off()
   
 }
@@ -60,7 +88,6 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   for(i in 1:n_param_samples)
   { pb$tick()
     sampled_params = sample_params()
-   
     rec[i,] = unlist(sampled_params, use.names = FALSE) 
     data = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
     
@@ -93,7 +120,7 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
   if(dir.exists(scenario_folder))
   { if(fresh)
     {
-      unlink(scenario_folder)
+      unlink(scenario_folder,rec=TRUE)
       dir.create(scenario_folder)
     }
   } else
@@ -113,7 +140,19 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
                     scenario$sample_params,
                     scenario$design,
                     h, 
-                    file.path(scenario_folder, "vis.png") )
+                    scenario_folder, 
+                    "vis_type1") 
+  visualize_setting(scenario$H1_drift,
+                    diffusion, 
+                    scenario$model_H0, 
+                    scenario$model_H1,
+                    scenario$T_statistic,
+                    scenario$sample_params,
+                    scenario$design,
+                    h, 
+                    scenario_folder,
+                    "vis_type2",
+                    draw_vmax = TRUE) 
   #Type 1 Error
   res_type_1 = run_simulation_study(scenario$H0_drift,
                              diffusion,
