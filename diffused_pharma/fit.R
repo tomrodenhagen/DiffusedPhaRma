@@ -50,8 +50,6 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
   model$addSystem(equation)
   model$nprior <- length(params)
   model$PriorCorrelationMatrix <- diag(length(params)) 
-  
- 
   dimnames(model$PriorCorrelationMatrix) <- rep(list(params), 2)
   #Conc should be in the equation
   model$addObs( ConcObserved ~ Conc )
@@ -86,13 +84,22 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
       return(simulate_model(drift, diffusion, ...))
       
     } 
+
  
-    
+  
   myModel = list("cstmModel" = model,
                "drift"=drift,
                "diffusion" = diffusion,
                "estimate"  = estimate,
-               "simulate"  = simulate
+               "simulate"  = simulate,
+	       "equation" = equation,
+	       "params" = params,
+	       "prior" = prior,
+	       "bounds" = bounds
                   )
   return(myModel)
+}
+copy_model = function(model)
+{
+  return(build_model(model$equation, model$drift, model$diffusion, model$params, model$prior, model$bounds))
 }

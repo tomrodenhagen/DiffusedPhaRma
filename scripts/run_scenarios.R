@@ -1,8 +1,8 @@
 source("diffused_pharma/experiment_utils.R")
 
 #Some script params
-test = TRUE
-local = TRUE
+test = FALSE
+local = FALSE
 n_days = 15
 #Some base arguments
 
@@ -64,7 +64,7 @@ Km = 4 # mg per liter
 Vmax = 6
 CL = Vmax / Km # mg per day
 Conc0 =0
-return(list("sigma_eps"=0.001, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
+return(list("sigma_eps"=0.01, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
 }
 
 sample_params_high_Vmax = function()
@@ -73,7 +73,7 @@ Km = 4 # mg per liter
 Vmax = 8
 CL = Vmax / Km # mg per day
 Conc0 =0
-return(list("sigma_eps"=0.001, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
+return(list("sigma_eps"=0.01, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
 }
 sample_params_high_noise = function()
 { V = 50
@@ -92,7 +92,15 @@ scenario_base = list(name="base",
                      T_statistic=T_statistic,
                      H0_drift=H0_drift,
                      H1_drift=H1_drift)
-scenario_high_noise = list(name="high_noise",
+scenario_base2 = list(name="HighNoise",
+                     model_H0=model_H0,
+                     model_H1=model_H1,
+                     design = design,
+                     sample_params=sample_params_high_noise,
+                     T_statistic=T_statistic,
+                     H0_drift=H0_drift,
+                     H1_drift=H1_drift)
+scenario_base3 = list(name="HighNoise",
                      model_H0=model_H0,
                      model_H1=model_H1,
                      design = design,
@@ -101,14 +109,15 @@ scenario_high_noise = list(name="high_noise",
                      H0_drift=H0_drift,
                      H1_drift=H1_drift)
 
+
 if(test)
 {
-  n_simulations= 50
+  n_simulations= 100 
   n_samples = 50
 } else
 {
-  n_simulations=500
-  n_samples=500
+  n_simulations=60
+  n_samples=100
   
 }
 if(local)
@@ -116,11 +125,14 @@ if(local)
   path = "C:/Users/roden/Documents/data"
 } else
 {
-  path = " "
+  path = "/localhome/tr"
 }
-scenarios = list(scenario_base)
+scenarios = list(scenario_base,scenario_base2,scenario_base3,scenario_base3,scenario_base3)
 for(scenario in scenarios)
 {
-  run_complete_scenario(scenario, path, n_simulations, n_samples, alpha = 0.05, h=0.02,TRUE)
+  res = run_complete_scenario(scenario, path, n_simulations, n_samples, alpha = 0.05, h=0.02,TRUE)
+  print(scenario$name)
+  print(eval_simulation(res[["type1"]]))
+  print(eval_simulation(res[["type2"]]))
 }
 

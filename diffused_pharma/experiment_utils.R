@@ -2,30 +2,22 @@ source("diffused_pharma/fit.R")
 source("diffused_pharma/sim.R")
 library(parallel)
 library(jsonlite)
-
+library(unixtools)
 run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design, alpha=0.05,h=0.1)
 { 
   estimated_params_H0 = model_H0$estimate(data)
 
   estimated_params_H1 = model_H1$estimate(data)
   T_samples = c()
-  if(.Platform$OS.type == "unix")
-  {
-    numCores = detectCores()
-  }
-  else
-  {
-    numCores <- 1
-  }
   generate_T_sample = function(dummy)
   {   
       data_sim = model_H0$simulate(estimated_params_H0, design$t_start, design$t_end,design$n_samples, h, design$dosis)
-      estimate_sim = model_H1$estimate(data_sim)
-      
+      estimate_sim = model_H1$estimate(data_sim)     
       return(T_statistic(estimate_sim))		
   }
-  T_samples <-mclapply(1:n_simulations, generate_T_sample, mc.cores = numCores)
+  T_samples <-mclapply(1:n_simulations, generate_T_sample, mc.cores = 1)
   T_samples = unlist(T_samples, use.names=FALSE)
+  
   emp_quantile = quantile(T_samples, 1 - alpha)
   return(list(rejected = emp_quantile < T_statistic(estimated_params_H1)))
 }
@@ -82,39 +74,51 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
 { 
   
   rec <- as.data.frame(matrix(0, ncol = length(sample_params()), nrow = n_param_samples))
-  res_vec = c()
+  
   names(rec) = names(sample_params())
+  res_vec = c()  
   pb = progress_bar$new(total = n_param_samples)
-  for(i in 1:n_param_samples)
-  { pb$tick()
-    sampled_params = sample_params()
-    rec[i,] = unlist(sampled_params, use.names = FALSE) 
-    data = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
-    
-    #Data should look like real world data
-    res = run_test(data, model_H0, model_H1, T_statistic, n_simulations, design,h)
-    res_vec = c(res_vec, as.integer(res$rejected) )
+  if(.Platform$OS.type == "unix")
+  {
+    numCores = detectCores()
   }
-  rec[["test_rejected"]] = res_vec
+  else
+  {
+    numCores <- 1
+  } 
+  run_test_wrapper = function(dummy)
+  { tmp_path = file.path("/tmp", paste("tmp", dummy, sep="_") )
+    
+    dir.create(tmp_path)
+    set.tempdir(tmp_path)
+    sampled_params = sample_params() 
+    data = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
+    #Data should look like real world data
+    model_H0_copy=copy_model(model_H0)
+    model_H1_copy=copy_model(model_H1)
+    res = run_test(data, model_H0_copy, model_H1_copy, T_statistic, n_simulations, design,h)
+    
+    return(res)
+  }
+  
+  res_vec = mclapply(1:n_param_samples, run_test_wrapper, mc.cores = numCores)
+  res = unlist(res_vec, use.names=FALSE)
+  print(res)
+  rec[["test_rejected"]] = res
+  
   return(rec)
  
 }
-eval_simulation = function(rec, path, name )
+eval_simulation = function(rec, path=NULL, name=NULL )
 { 
   res_evaluated = ("Percentages of rejected tests"=mean(rec$test_rejected) ) 
-  save(rec, file= file.path(path, paste(name , "complete_res.csv", sep = "_") ) )
-  res_evaluated <- toJSON(res_evaluated)
-  write(res_evaluated, file.path(path,paste(name , "eval.csv", sep = "_")))
- 
-  for(param in colnames(rec))
-  {
-    if(param=="sigma_eps" | param=="test_rejected")
-    {
-      next
-    }
-    #plot(ksmooth(rec[[param]], rec[["test_rejected"]]),title=param,xlab=param,ylab="test_rej")
+  if(!is.null(path))
+  {save(rec, file= file.path(path, paste(name , "complete_res.csv", sep = "_") ) )
+   res_evaluated <- toJSON(res_evaluated)
+   write(res_evaluated, file.path(path,paste(name , "eval.csv", sep = "_")))
   }
-}
+  return(res_evaluated)
+ }
 run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Masterarbeit", n_simulations = 500, n_samples=500, alpha = 0.05, h=0.02, fresh=TRUE)
 { scenario_folder = file.path(path, scenario$name)
   if(dir.exists(scenario_folder))
@@ -171,6 +175,7 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
                                     scenario$sample_params, 
                                     scenario$design, n_simulations, n_samples, alpha)
   eval_simulation(res_type_2, scenario_folder, "typ2_res")
+  return(list(type1=res_type_1, type2=res_type_2))
 }
   
 
