@@ -70,7 +70,7 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
   
 }
 library(progress)
-run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, n_param_samples, n_simulations, h=0.1)
+run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, n_param_samples, n_simulations,log_path, h=0.1)
 { 
   
   rec <- as.data.frame(matrix(0, ncol = length(sample_params()), nrow = n_param_samples))
@@ -85,7 +85,8 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   else
   {
     numCores <- 1
-  } 
+  }
+  numCores=1 
   run_test_wrapper = function(dummy)
   { tmp_path = file.path("/tmp", paste("tmp", dummy, sep="_") )
     
@@ -97,29 +98,47 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
     model_H0_copy=copy_model(model_H0)
     model_H1_copy=copy_model(model_H1)
     res = run_test(data, model_H0_copy, model_H1_copy, T_statistic, n_simulations, design,h)
-    
-    return(res)
+    if(dummy%%50==0)
+     {print(dummy)}
+    unlink(tmp_path)
+    return(list("res"=res, "params"=unlist(sampled_params,use.names=FALSE)))
   }
   
-  res_vec = mclapply(1:n_param_samples, run_test_wrapper, mc.cores = numCores)
-  res = unlist(res_vec, use.names=FALSE)
-  print(res)
-  rec[["test_rejected"]] = res
+  res_list = mclapply(1:n_param_samples, run_test_wrapper, mc.cores = numCores)
+  res_vec = c()
+  for(i in seq_along(res_list))
+  {  
+	rec[i,]=res_list[[i]]$params
+  	res_vec = c(res_vec, res_list[[i]]$res)
+  }
   
+  
+  rec[["test_rejected"]] = as.integer(res_vec)
+ 
   return(rec)
  
 }
+library(matrixStats)
 eval_simulation = function(rec, path=NULL, name=NULL )
 { 
   res_evaluated = ("Percentages of rejected tests"=mean(rec$test_rejected) ) 
   if(!is.null(path))
-  {save(rec, file= file.path(path, paste(name , "complete_res.csv", sep = "_") ) )
-   res_evaluated <- toJSON(res_evaluated)
-   write(res_evaluated, file.path(path,paste(name , "eval.csv", sep = "_")))
+  {  
+	write(res_evaluated, file.path(path,paste(name , "eval.csv", sep = "_")))
   }
+  means_per_Km = aggregate(rec$test_rejected, by=list(Km=rec$Km), FUN=mean) 
+  print(means_per_Km)
+  if(!is.null(path))
+{
+  jpeg(file.path(path, paste(name , "per_parameter.jpeg", sep = "_"))) 
+}
+  plot(means_per_Km, main=paste(name, "_vs_Km",sep=""),xlab="Km",ylab="Percentage of rejected tests")
+  text = paste("~", nrow(rec) / nrow(means_per_Km), "per group")
+  mtext(text, side = 1, line = 6, cex = 0.8, adj = 0) 
+  dev.off()
   return(res_evaluated)
  }
-run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Masterarbeit", n_simulations = 500, n_samples=500, alpha = 0.05, h=0.02, fresh=TRUE)
+run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Masterarbeit", n_tests_typ1 = 500,n_tests_typ2=500, n_samples=500, alpha = 0.05, h=0.02, fresh=TRUE)
 { scenario_folder = file.path(path, scenario$name)
   if(dir.exists(scenario_folder))
   { if(fresh)
@@ -132,7 +151,7 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
     dir.create(scenario_folder)
   }
 
-  
+  cat(scenario$description,file=file.path(scenario_folder,"description.txt"),sep="\n")
   #some standart parameters, we might change that at a later point
   diffusion = function(t, state, u , params){return(0)}
   #Visualize 
@@ -158,22 +177,43 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
                     "vis_type2",
                     draw_vmax = TRUE) 
   #Type 1 Error
+
+  res_path = file.path(scenario_folder, paste("typ1_res" , "complete_res.csv", sep = "_"))
+  if(file.exists(res_path) & !fresh)
+  {
+  res_type_1 = readRDS(file=res_path)
+  } else
+ {
   res_type_1 = run_simulation_study(scenario$H0_drift,
                              diffusion,
                              scenario$model_H0, 
                              scenario$model_H1, 
                              scenario$T_statistic, 
                              scenario$sample_params, 
-                             scenario$design, n_simulations, n_samples, alpha)
+                             scenario$design, n_tests_typ1, n_samples, alpha, h=h)
+  saveRDS(res_type_1, file=res_path ) 
+
+ }
+ 
   eval_simulation(res_type_1, scenario_folder, "typ1_res")
   #Type 2 error
+  res_path = file.path(scenario_folder, paste("typ2_res" , "complete_res.csv", sep = "_"))
+
+   if(file.exists(res_path) & !fresh)
+  {
+  res_type_2 = readRDS(file=res_path)
+  } else
+ {
   res_type_2 = run_simulation_study(scenario$H1_drift,
-                                    diffusion,
-                                    scenario$model_H0, 
-                                    scenario$model_H1, 
-                                    scenario$T_statistic, 
-                                    scenario$sample_params, 
-                                    scenario$design, n_simulations, n_samples, alpha)
+                             diffusion,
+                             scenario$model_H0, 
+                             scenario$model_H1, 
+                             scenario$T_statistic, 
+                             scenario$sample_params, 
+                             scenario$design, n_tests_typ2, n_samples, alpha, h=h)
+  saveRDS(res_type_2, file=res_path ) 
+
+ }  
   eval_simulation(res_type_2, scenario_folder, "typ2_res")
   return(list(type1=res_type_1, type2=res_type_2))
 }

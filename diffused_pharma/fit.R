@@ -44,10 +44,16 @@ set_params = function(model, params, prior, bounds)
   }
 }
 
-build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list())
+build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list(), second_equation=NULL)
 { 
   model <- ctsm$new()
   model$addSystem(equation)
+
+  if(!is.null(second_equation) )
+  {
+  	model$addSystem(second_equation)
+  }
+
   model$nprior <- length(params)
   model$PriorCorrelationMatrix <- diag(length(params)) 
   dimnames(model$PriorCorrelationMatrix) <- rep(list(params), 2)

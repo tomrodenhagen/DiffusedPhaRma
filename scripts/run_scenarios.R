@@ -1,7 +1,7 @@
 source("diffused_pharma/experiment_utils.R")
 
 #Some script params
-test = FALSE
+test = TRUE
 local = FALSE
 n_days = 15
 #Some base arguments
@@ -11,7 +11,7 @@ model_H0 = build_model(dConc ~ (- CL  *  Conc + D / V  ) * dt + sigma_tau * dw1,
                        drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
                        diffusion = function(t, state, u , params){return(0)},
                        list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
-                       bounds= list("sigma_tau"= list("init"= 0.0000001), 
+                       bounds= list("sigma_tau"= list("init"= 0.0000001),
                                     "V"= list("init"= 10, "lower" = 0, "upper" = 100)) 
 )
 
@@ -19,7 +19,42 @@ model_H1 = build_model(dConc ~ (- CL  * Conc + D / V  ) * dt + sigma_tau * dw1,
                        drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
                        diffusion = function(t, state, u , params){return(params$sigma_tau)},
                        list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
-                       bounds= list("V"= list("init"= 10, "lower" = 0, "upper" = 100)) )
+                       bounds= list("V"= list("init"= 10, "lower" = 0, "upper" = 100) )
+
+)
+
+model_H0 = build_model(dConc ~ (- CL  *  Conc + D / V  ) * dt + sigma_tau * dw1,
+                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
+                       diffusion = function(t, state, u , params){return(0)},
+                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
+                       bounds= list("sigma_tau"= list("init"= 0.0000001),
+                                    "V"= list("init"= 10, "lower" = 0, "upper" = 100)) 
+)
+
+model_H1 = build_model(dConc ~ (- M  * Conc + D / V  ) * dt + 0.0001 * dw1 , second_equation = dM ~ CL * dt + sigma_tau * dw2, 
+                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
+                       diffusion = function(t, state, u , params){return(params$sigma_tau)},
+                       list("Conc0","CL", "sigma_eps","sigma_tau", "V","M0"),
+                       bounds= list("V"= list("init"= 10, "lower" = 0, "upper" = 100) )
+
+)
+
+
+
+model_H0_fixed_eps = build_model(dConc ~ (- CL  *  Conc + D / V  ) * dt + sigma_tau * dw1,
+                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
+                       diffusion = function(t, state, u , params){return(0)},
+                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
+                       bounds= list("sigma_tau"= list("init"= 0.0000001),
+				    "sigma_eps"= list("init"= 0.05), 
+                                    "V"= list("init"= 10, "lower" = 0, "upper" = 100)) 
+)
+
+model_H1_fixed_eps = build_model(dConc ~ (- CL  * Conc + D / V  ) * dt + sigma_tau * dw1,
+                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
+                       diffusion = function(t, state, u , params){return(params$sigma_tau)},
+                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
+                       bounds= list("V"= list("init"= 10, "lower" = 0, "upper" = 100),"sigma_eps"= list("init"= 0.05)) )
 
 T_statistic = function(estimate){return(estimate$sigma_tau)[0]}
 #Models to simulate
@@ -52,39 +87,16 @@ design = list(t_start=0, t_end = n_days, n_samples=get_samples(n_days), dosis = 
 #Choice of parameters
 sample_params = function()
 { V = 50
-  Km = 4 # mg per liter
+  Km = sample(c(2,3,4,5,6,7),1)  # mg per liter
   Vmax = 7
-  CL = Vmax / Km # mg per day
+  CL = Vmax / 4 # mg per day
   Conc0 =0
-  return(list("sigma_eps"=0.001, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
-}
-sample_params_low_Vmax = function()
-{ V = 50
-Km = 4 # mg per liter
-Vmax = 6
-CL = Vmax / Km # mg per day
-Conc0 =0
-return(list("sigma_eps"=0.01, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
+  return(list("sigma_eps"=0.05, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km,"M0" = 0, "V"=V))
 }
 
-sample_params_high_Vmax = function()
-{ V = 50
-Km = 4 # mg per liter
-Vmax = 8
-CL = Vmax / Km # mg per day
-Conc0 =0
-return(list("sigma_eps"=0.01, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
-}
-sample_params_high_noise = function()
-{ V = 50
-Km = 4 # mg per liter
-Vmax = 7
-CL = Vmax / Km # mg per day
-Conc0 =0
-return(list("sigma_eps"=0.01, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
-}
-
-scenario_base = list(name="base",
+scenario_1 = list(name="base_test",
+		     description="No assumptions to sigma_eps in the model. 
+		     		  Choosed Km between 2 and 7",
                      model_H0=model_H0,
                      model_H1=model_H1,
                      design = design,
@@ -92,32 +104,32 @@ scenario_base = list(name="base",
                      T_statistic=T_statistic,
                      H0_drift=H0_drift,
                      H1_drift=H1_drift)
-scenario_base2 = list(name="HighNoise",
-                     model_H0=model_H0,
-                     model_H1=model_H1,
-                     design = design,
-                     sample_params=sample_params_high_noise,
-                     T_statistic=T_statistic,
-                     H0_drift=H0_drift,
-                     H1_drift=H1_drift)
-scenario_base3 = list(name="HighNoise",
-                     model_H0=model_H0,
-                     model_H1=model_H1,
-                     design = design,
-                     sample_params=sample_params_high_noise,
-                     T_statistic=T_statistic,
-                     H0_drift=H0_drift,
-                     H1_drift=H1_drift)
 
+
+
+
+scenario_2 = list(name="Fixed_eps_0.05",
+		     description="Specifies and fixed the true sigma_eps in the model. 
+		     		  Choosed Km between 2 and 7",
+                     model_H0=model_H0_fixed_eps,
+                     model_H1=model_H1_fixed_eps,
+                     design = design,
+                     sample_params=sample_params,
+                     T_statistic=T_statistic,
+                     H0_drift=H0_drift,
+                     H1_drift=H1_drift)
 
 if(test)
 {
-  n_simulations= 100 
-  n_samples = 50
+  n_simulations_typ1=200
+  n_simulations_typ2=200
+  n_samples=200
+
 } else
 {
-  n_simulations=60
-  n_samples=100
+  n_simulations_typ1=400
+  n_simulations_typ2=5000
+  n_samples=200
   
 }
 if(local)
@@ -127,10 +139,10 @@ if(local)
 {
   path = "/localhome/tr"
 }
-scenarios = list(scenario_base,scenario_base2,scenario_base3,scenario_base3,scenario_base3)
+scenarios = list(scenario_1, scenario_2)
 for(scenario in scenarios)
 {
-  res = run_complete_scenario(scenario, path, n_simulations, n_samples, alpha = 0.05, h=0.02,TRUE)
+  res = run_complete_scenario(scenario, path, n_simulations_typ1, n_simulations_typ2, n_samples, alpha = 0.05, h=0.02,TRUE)
   print(scenario$name)
   print(eval_simulation(res[["type1"]]))
   print(eval_simulation(res[["type2"]]))
