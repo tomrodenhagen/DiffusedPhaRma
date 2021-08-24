@@ -44,15 +44,10 @@ set_params = function(model, params, prior, bounds)
   }
 }
 
-build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list(), second_equation=NULL)
+build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list(), transf=identity, inv_transf=identity)
 { 
   model <- ctsm$new()
   model$addSystem(equation)
-
-  if(!is.null(second_equation) )
-  {
-  	model$addSystem(second_equation)
-  }
 
   model$nprior <- length(params)
   model$PriorCorrelationMatrix <- diag(length(params)) 
@@ -65,7 +60,7 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
   set_params(model,params, prior, bounds)
     
   estimate = function(data, n_retrys=5)
-    {
+    { data[["ConcObserved"]] = inv_transf(data[["ConcObserved"]])
       invisible( capture.output( fit <- model$estimate(data) ) )
       for(k in 1:n_retrys)
       {
@@ -87,7 +82,9 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
     }
   simulate = function(...)
     {
-      return(simulate_model(drift, diffusion, ...))
+        data = simulate_model(drift, diffusion, ...)
+        data[["ConcObserved"]] = transf(data[["ConcObserved"]])
+	return(data)
       
     } 
 
@@ -101,11 +98,16 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
 	       "equation" = equation,
 	       "params" = params,
 	       "prior" = prior,
-	       "bounds" = bounds
+	       "bounds" = bounds,
+	       "transf"= transf,
+	       "inv_transf" = inv_transf
                   )
   return(myModel)
 }
 copy_model = function(model)
 {
-  return(build_model(model$equation, model$drift, model$diffusion, model$params, model$prior, model$bounds))
+  return(build_model(model$equation, model$drift, 
+		     model$diffusion, model$params, 
+		     model$prior, model$bounds, 
+		     model$transf, model$inv_transf))
 }
