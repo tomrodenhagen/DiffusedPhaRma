@@ -2,7 +2,12 @@ source("diffused_pharma/fit.R")
 source("diffused_pharma/sim.R")
 library(parallel)
 library(jsonlite)
-library(unixtools)
+linux = .Platform$OS.type == "unix"
+if(linux)
+{
+  library(unixtools)
+}
+
 run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design, alpha=0.05,h=0.1)
 { 
   estimated_params_H0 = model_H0$estimate(data)
@@ -21,7 +26,7 @@ run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design
   emp_quantile = quantile(T_samples, 1 - alpha)
   return(list(rejected = emp_quantile < T_statistic(estimated_params_H1)))
 }
-visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, h, path, name, draw_vmax=FALSE)
+visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, h, path, name, draw_Km=FALSE)
 {
   sampled_params = sample_params()
   data_obs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
@@ -29,6 +34,10 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
                               1000, h=h, design$dosis)
   estimated_params_H0 = model_H0$estimate(data_obs)
   estimated_params_H1 = model_H1$estimate(data_obs)
+  print(estimated_params_H0)
+  print(estimated_params_H1)
+  
+  
   pathH0 = file.path(path, paste(name,"visH0.png",sep="_"))
   jpeg(file=pathH0)
   plot(data_obs[["t"]], data_obs[["ConcObserved"]],
@@ -40,11 +49,11 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
   
   data_H0 = model_H0$simulate(estimated_params_H0, design$t_start, design$t_end,300,  h=h, design$dosis)
   lines(data_H0[["t"]], data_H0[["ConcObserved"]], pch=2, col="red")
-  legend( x= "bottomright", legend=c("Observed points", "True", "Predicted from Model H0"),
-  col=c("blue","green", "red"), lty=1:2, cex=1,pch=19)
-  if(draw_vmax)
+  legend( x= "bottomright", legend=c("Observed points", "True", "Predicted from Model H0", "Km"),
+  col=c("blue","green", "red","brown"), lty=1:2, cex=1,pch=19)
+  if(draw_Km)
     {
-    abline(h=sampled_params$Vmax, col="brown")
+    abline(h=sampled_params$Km, col="brown")
     }
   dev.off()
   
@@ -59,12 +68,12 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
  
   data_H1 = model_H1$simulate(estimated_params_H1, design$t_start, design$t_end,300,  h=h, design$dosis)
   lines(data_H1[["t"]], data_H1[["ConcObserved"]], pch=3, col="blue")
-  if(draw_vmax)
+  if(draw_Km)
   {
-    abline(h=sampled_params$Vmax, col="brown")
+    abline(h=sampled_params$Km, col="brown")
   }
-  legend( x= "bottomright", legend=c("Observed points", "True", "Predicted from Model H1"),
-          col=c("blue","green", "blue"), lty=1:2, cex=1)
+  legend( x= "bottomright", legend=c("Observed points", "True", "Predicted from Model H1", "Km"),
+          col=c("blue","green", "blue","brown"), lty=1:2, cex=1)
   
   dev.off()
   
@@ -78,7 +87,8 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   names(rec) = names(sample_params())
   res_vec = c()  
   pb = progress_bar$new(total = n_param_samples)
-  if(.Platform$OS.type == "unix")
+  linux = .Platform$OS.type == "unix"
+  if(linux)
   {
     numCores = detectCores()
   }
@@ -88,10 +98,12 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   }
   
   run_test_wrapper = function(dummy)
-  { tmp_path = file.path("/tmp", paste("tmp", dummy, sep="_") )
-    
-    dir.create(tmp_path)
-    set.tempdir(tmp_path)
+  { if(linux)
+    {
+      tmp_path = file.path("/tmp", paste("tmp", dummy, sep="_") )
+      dir.create(tmp_path)
+      set.tempdir(tmp_path)
+    }
     sampled_params = sample_params() 
     data = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
     #Data should look like real world data
@@ -99,8 +111,11 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
     model_H1_copy=copy_model(model_H1)
     res = run_test(data, model_H0_copy, model_H1_copy, T_statistic, n_simulations, design,h)
     if(dummy%%50==0)
-     {print(dummy)}
-    unlink(tmp_path)
+      {print(dummy)}
+    if(linux)
+    {
+      unlink(tmp_path)
+    }
     return(list("res"=res, "params"=unlist(sampled_params,use.names=FALSE)))
   }
   
@@ -175,7 +190,7 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
                     h, 
                     scenario_folder,
                     "vis_type2",
-                    draw_vmax = TRUE) 
+                    draw_Km = TRUE) 
   #Type 1 Error
 
   res_path = file.path(scenario_folder, paste("typ1_res" , "complete_res.csv", sep = "_"))

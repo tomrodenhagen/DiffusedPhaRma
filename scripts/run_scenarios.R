@@ -2,7 +2,7 @@ source("diffused_pharma/experiment_utils.R")
 
 #Some script params
 test = TRUE
-local = FALSE
+local = TRUE
 n_days = 15
 #Some base arguments
 
@@ -20,7 +20,8 @@ model_H1 = build_model(dConc ~ (- CL - sigma_tau**2 * 0.5  +  D / V / exp(Conc) 
                        diffusion = function(t, state, u , params){return(params$sigma_tau * state  )},
                        params=list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
                        bounds= list("sigma_eps"= list("init"= 0.05),
-				    "V"= list("init"= 10, "lower" = 0, "upper" = 100)),
+				    "V"= list("init"= 10, "lower" = 0, "upper" = 100),
+				    "sigma_tau"= list("init"= 0.1, "lower" = 0, "upper" = 1)),
 		       transf = function(x){return(exp(x))},
                        observation_equation = ConcObserved ~ exp(Conc)
                        
