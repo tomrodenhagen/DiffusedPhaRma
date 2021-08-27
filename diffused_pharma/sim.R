@@ -73,7 +73,7 @@ simulate_model <- function(drift, diffusion, params, t_start, t_end, n_samples=2
   for (i in 1:nrow(data))
   { t = data[i, "t"]
     h = data[i + 1, "t"] - data[i, "t"] 
-    path = c(path, Conc + rnorm(1, 0, params$sigma_eps**0.5))
+    path = c(path,Conc + rnorm(1, 0, params$sigma_eps**0.5))
     Conc = next_step_sde(drift, diffusion,  t, Conc, data[i,"D"], params, h)
   }
  

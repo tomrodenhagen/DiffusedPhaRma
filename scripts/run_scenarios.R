@@ -10,51 +10,27 @@ n_days = 15
 model_H0 = build_model(dConc ~ (- CL  *  Conc + D / V  ) * dt + sigma_tau * dw1,
                        drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
                        diffusion = function(t, state, u , params){return(0)},
-                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
-                       bounds= list("sigma_tau"= list("init"= 0.0000001),
-                                    "V"= list("init"= 10, "lower" = 0, "upper" = 100)) 
+                       params=list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
+                       bounds= list("sigma_eps"= list("init"= 0.05),
+				    "sigma_tau"= list("init"= 0.0000001),
+                                   "V"= list("init"= 10, "lower" = 0, "upper" = 100)) 
 )
-
-model_H1 = build_model(dConc ~ (- CL  * Conc + D / V  ) * dt + sigma_tau * dw1,
-                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
-                       diffusion = function(t, state, u , params){return(params$sigma_tau)},
-                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
-                       bounds= list("V"= list("init"= 10, "lower" = 0, "upper" = 100) )
-
+model_H1 = build_model(dConc ~ (- CL - sigma_tau**2 * 0.5  +  D / V / exp(Conc)  ) * dt + sigma_tau * dw1, 
+                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V  )},
+                       diffusion = function(t, state, u , params){return(params$sigma_tau * state  )},
+                       params=list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
+                       bounds= list("sigma_eps"= list("init"= 0.05),
+				    "V"= list("init"= 10, "lower" = 0, "upper" = 100)),
+		       transf = function(x){return(exp(x))},
+                       observation_equation = ConcObserved ~ exp(Conc)
+                       
 )
-
-model_H0 = build_model(dConc ~ (- CL  *  Conc + D / V  ) * dt + sigma_tau * dw1,
-                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
-                       diffusion = function(t, state, u , params){return(0)},
-                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
-                       bounds= list("sigma_tau"= list("init"= 0.0000001),
-                                    "V"= list("init"= 10, "lower" = 0, "upper" = 100)) 
-)
-
-model_H1 = build_model(dConc ~ (- M  * Conc + D / V  ) * dt + 0.0001 * dw1 , second_equation = dM ~ CL * dt + sigma_tau * dw2, 
-                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
-                       diffusion = function(t, state, u , params){return(params$sigma_tau)},
-                       list("Conc0","CL", "sigma_eps","sigma_tau", "V","M0"),
-                       bounds= list("V"= list("init"= 10, "lower" = 0, "upper" = 100) )
-
-)
+ 
 
 
 
-model_H0_fixed_eps = build_model(dConc ~ (- CL  *  Conc + D / V  ) * dt + sigma_tau * dw1,
-                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
-                       diffusion = function(t, state, u , params){return(0)},
-                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
-                       bounds= list("sigma_tau"= list("init"= 0.0000001),
-				    "sigma_eps"= list("init"= 0.05), 
-                                    "V"= list("init"= 10, "lower" = 0, "upper" = 100)) 
-)
 
-model_H1_fixed_eps = build_model(dConc ~ (- CL  * Conc + D / V  ) * dt + sigma_tau * dw1,
-                       drift = function(t, state, u, params){return(-params$CL * state + u / params$V)},
-                       diffusion = function(t, state, u , params){return(params$sigma_tau)},
-                       list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
-                       bounds= list("V"= list("init"= 10, "lower" = 0, "upper" = 100),"sigma_eps"= list("init"= 0.05)) )
+
 
 T_statistic = function(estimate){return(estimate$sigma_tau)[0]}
 #Models to simulate
@@ -108,17 +84,6 @@ scenario_1 = list(name="base_test",
 
 
 
-scenario_2 = list(name="Fixed_eps_0.05",
-		     description="Specifies and fixed the true sigma_eps in the model. 
-		     		  Choosed Km between 2 and 7",
-                     model_H0=model_H0_fixed_eps,
-                     model_H1=model_H1_fixed_eps,
-                     design = design,
-                     sample_params=sample_params,
-                     T_statistic=T_statistic,
-                     H0_drift=H0_drift,
-                     H1_drift=H1_drift)
-
 if(test)
 {
   n_simulations_typ1=200
@@ -139,7 +104,7 @@ if(local)
 {
   path = "/localhome/tr"
 }
-scenarios = list(scenario_1, scenario_2)
+scenarios = list(scenario_1)
 for(scenario in scenarios)
 {
   res = run_complete_scenario(scenario, path, n_simulations_typ1, n_simulations_typ2, n_samples, alpha = 0.05, h=0.02,TRUE)

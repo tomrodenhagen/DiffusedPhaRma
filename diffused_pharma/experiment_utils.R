@@ -86,7 +86,7 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   {
     numCores <- 1
   }
-  numCores=1 
+  
   run_test_wrapper = function(dummy)
   { tmp_path = file.path("/tmp", paste("tmp", dummy, sep="_") )
     

@@ -44,7 +44,7 @@ set_params = function(model, params, prior, bounds)
   }
 }
 
-build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list(), transf=identity, inv_transf=identity)
+build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list(), observation_equation=ConcObserved ~ Conc, transf=identity)
 { 
   model <- ctsm$new()
   model$addSystem(equation)
@@ -53,14 +53,14 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
   model$PriorCorrelationMatrix <- diag(length(params)) 
   dimnames(model$PriorCorrelationMatrix) <- rep(list(params), 2)
   #Conc should be in the equation
-  model$addObs( ConcObserved ~ Conc )
+  model$addObs(observation_equation )
   model$addInput(D)
   #sigma_eps should be in the params 
   model$setVariance(ConcObserved ~ sigma_eps)
   set_params(model,params, prior, bounds)
     
   estimate = function(data, n_retrys=5)
-    { data[["ConcObserved"]] = inv_transf(data[["ConcObserved"]])
+    { 
       invisible( capture.output( fit <- model$estimate(data) ) )
       for(k in 1:n_retrys)
       {
@@ -77,13 +77,13 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
 
       }
       
-      
-      return(as.list(fit$xm))
+      res = as.list(fit$xm)
+      res[["Conc0"]] = transf(res[["Conc0"]])      
+      return(res)
     }
   simulate = function(...)
     {
         data = simulate_model(drift, diffusion, ...)
-        data[["ConcObserved"]] = transf(data[["ConcObserved"]])
 	return(data)
       
     } 
@@ -100,7 +100,7 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
 	       "prior" = prior,
 	       "bounds" = bounds,
 	       "transf"= transf,
-	       "inv_transf" = inv_transf
+	       "observation_equation" = observation_equation
                   )
   return(myModel)
 }
@@ -109,5 +109,5 @@ copy_model = function(model)
   return(build_model(model$equation, model$drift, 
 		     model$diffusion, model$params, 
 		     model$prior, model$bounds, 
-		     model$transf, model$inv_transf))
+		      model$observation_equation, model$transf))
 }
