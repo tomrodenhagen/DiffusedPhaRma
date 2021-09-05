@@ -1,7 +1,9 @@
 source("diffused_pharma/fit.R")
 source("diffused_pharma/sim.R")
 library(parallel)
+library(mctools)
 library(jsonlite)
+DEBUG = FALSE
 linux = .Platform$OS.type == "unix"
 if(linux)
 {
@@ -11,20 +13,35 @@ if(linux)
 run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design, alpha=0.05,h=0.1)
 { 
   estimated_params_H0 = model_H0$estimate(data)
-
-  estimated_params_H1 = model_H1$estimate(data)
+  
+  H1_fit = model_H1$estimate(data, full_info=TRUE)
+ 
+  if(is.null(estimated_params_H0) | is.null(H1_fit))
+  {
+   return(NULL)
+  }
+  estimated_params_H1 = H1_fit$res
+  
+ 
   T_samples = c()
   generate_T_sample = function(dummy)
   {   
       data_sim = model_H0$simulate(estimated_params_H0, design$t_start, design$t_end,design$n_samples, h, design$dosis)
-      estimate_sim = model_H1$estimate(data_sim)     
-      return(T_statistic(estimate_sim))		
+      estimate_sim = model_H1$estimate(data_sim)
+      if(!is.null(estimate_sim))
+      {
+	return(T_statistic(estimate_sim))
+      }
+      else
+      {
+	return(NA)
+      }
   }
   T_samples <-mclapply(1:n_simulations, generate_T_sample, mc.cores = 1)
-  T_samples = unlist(T_samples, use.names=FALSE)
   
-  emp_quantile = quantile(T_samples, 1 - alpha)
-  return(list(rejected = emp_quantile < T_statistic(estimated_params_H1)))
+  T_samples = unlist(T_samples, use.names=FALSE)
+  emp_quantile = unname(quantile(na.omit(T_samples), 1 - alpha))
+  return(list(rejected = emp_quantile < T_statistic(estimated_params_H1), H1_lh = H1_fit$f  ,na_samples= sum(is.na(T_samples)) ))
 }
 visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, h, path, name, draw_Km=FALSE)
 {
@@ -96,9 +113,13 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   {
     numCores <- 1
   }
-  
+  if(DEBUG)
+  {
+	  numCores=1
+  } 
   run_test_wrapper = function(dummy)
-  { if(linux)
+  { 
+    if(linux)
     {
       tmp_path = file.path("/tmp", paste("tmp", dummy, sep="_") )
       dir.create(tmp_path)
@@ -110,41 +131,51 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
     model_H0_copy=copy_model(model_H0)
     model_H1_copy=copy_model(model_H1)
     res = run_test(data, model_H0_copy, model_H1_copy, T_statistic, n_simulations, design,h)
+    
     if(dummy%%50==0)
       {print(dummy)}
     if(linux)
     {
       unlink(tmp_path)
     }
+    
     return(list("res"=res, "params"=unlist(sampled_params,use.names=FALSE)))
   }
   
-  res_list = mclapply(1:n_param_samples, run_test_wrapper, mc.cores = numCores)
-  res_vec = c()
+  res_list = mcMap(1:n_param_samples, run_test_wrapper, mc.cores = numCores)
+  res_vec = rep(NA, length(res_list))
   for(i in seq_along(res_list))
-  {  
+  { 	
 	rec[i,]=res_list[[i]]$params
-  	res_vec = c(res_vec, res_list[[i]]$res)
+       
+  	if(!is.null(res_list[[i]]$res))
+	{
+  	 res_vec[[i]] = res_list[[i]]$res$rejected
+	}
+	
   }
   
-  
+  print(length(res_vec)) 
   rec[["test_rejected"]] = as.integer(res_vec)
- 
   return(rec)
  
 }
 library(matrixStats)
-eval_simulation = function(rec, path=NULL, name=NULL )
-{ 
-  res_evaluated = ("Percentages of rejected tests"=mean(rec$test_rejected) ) 
+eval_simulation = function(rec_with_na, path=NULL, name=NULL )
+{ n_not_valid = sum(is.na(rec_with_na$test_rejected))
+  rec = rec_with_na[!is.na(rec_with_na$test_rejected),]
+  res_evaluated = list("Percentages of rejected tests"=mean(rec$test_rejected), "Number of not valid tests" = n_not_valid ) 
   if(!is.null(path))
   {  
-	write(res_evaluated, file.path(path,paste(name , "eval.csv", sep = "_")))
+	write(toJSON(res_evaluated), 
+	      file.path(path,paste(name , "eval.csv", sep = "_")))
   }
   means_per_Km = aggregate(rec$test_rejected, by=list(Km=rec$Km), FUN=mean) 
-  print(means_per_Km)
+  na_per_Km = aggregate(is.na(rec_with_na$test_rejected), by=list(Km=rec_with_na$Km), FUN=mean) 
+
   if(!is.null(path))
-{
+{ print(means_per_Km)
+  print(na_per_Km)
   jpeg(file.path(path, paste(name , "per_parameter.jpeg", sep = "_"))) 
 }
   plot(means_per_Km, main=paste(name, "_vs_Km",sep=""),xlab="Km",ylab="Percentage of rejected tests")
@@ -192,13 +223,14 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
                     "vis_type2",
                     draw_Km = TRUE) 
   #Type 1 Error
-
+  
   res_path = file.path(scenario_folder, paste("typ1_res" , "complete_res.csv", sep = "_"))
   if(file.exists(res_path) & !fresh)
   {
+ 	  
   res_type_1 = readRDS(file=res_path)
   } else
- {
+ {print("Run type1 testing...")
   res_type_1 = run_simulation_study(scenario$H0_drift,
                              diffusion,
                              scenario$model_H0, 
@@ -218,7 +250,7 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
   {
   res_type_2 = readRDS(file=res_path)
   } else
- {
+ {print("Running type 2 testing...")
   res_type_2 = run_simulation_study(scenario$H1_drift,
                              diffusion,
                              scenario$model_H0, 

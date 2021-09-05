@@ -59,18 +59,23 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
   model$setVariance(ConcObserved ~ sigma_eps)
   set_params(model,params, prior, bounds)
     
-  estimate = function(data, n_retrys=5)
+  estimate = function(data, n_retrys=10, full_info=FALSE)
     { 
       invisible( capture.output( fit <- model$estimate(data) ) )
       for(k in 1:n_retrys)
-      {
+      {  
         if(fit$info==0)
-        {
-          break
+	{if(fit$f < 500)
+          {
+	  break
+	  }
         }
+      	print(k)
         if(k==n_retrys)
 	{
-	 stop("Fitting algorithm didnt converged until last retry.")
+	 warning("Fitting algorithm didnt converged until last retry.")
+	 
+	 return(NULL)
 	}
         set_params(model,params, prior, bounds)
         invisible( capture.output( fit <- model$estimate(data) ) )
@@ -78,8 +83,14 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
       }
       
       res = as.list(fit$xm)
-      res[["Conc0"]] = transf(res[["Conc0"]])      
+      res[["Conc0"]] = transf(res[["Conc0"]])
+      if(full_info)
+      {       fit[["res"]] = res
+	      return(fit)}
+      else
+      {
       return(res)
+      }
     }
   simulate = function(...)
     {
