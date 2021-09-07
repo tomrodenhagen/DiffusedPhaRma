@@ -45,7 +45,7 @@ run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design
 }
 visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, h, path, name, draw_Km=FALSE)
 { 
-  for(k in 1:5)
+  for(k in 1:3)
   {
   sampled_params = sample_params()
   data_obs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
@@ -57,7 +57,8 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
   print(estimated_params_H1)
   
   
-  pathH0 = file.path(path, paste(name,str(k), "visH0.png",sep="_"))
+  pathH0 = file.path(path, paste(name,toString(k), "visH0.png",sep="_"))
+  
   jpeg(file=pathH0)
   plot(data_obs[["t"]], data_obs[["ConcObserved"]],
        main="Sample experiment",
@@ -76,7 +77,7 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
     }
   dev.off()
   
-  pathH1 = file.path(path, paste(name, str(k), "visH1.png",sep="_"))
+  pathH1 = file.path(path, paste(name, toString(k), "visH1.png",sep="_"))
   jpeg(file=pathH1)
   plot(data_obs[["t"]], data_obs[["ConcObserved"]],
        main="Sample experiment",

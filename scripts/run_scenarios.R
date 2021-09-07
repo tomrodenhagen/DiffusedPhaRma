@@ -4,7 +4,7 @@ sink(stdout(), type="message")
 options(error=traceback)
 #Some script params
 test = TRUE
-local = FALSE
+local = .Platform$OS.type != "unix"
 n_days = 15
 #Some base arguments
 
@@ -69,43 +69,58 @@ sample_params = function()
   Conc0 = 0
   return(list("sigma_eps"=sigma_eps, "sigma_tau"=0, "CL"=CL, "Conc0"=Conc0, "Km"= Km, "V"=V))
 }
-return sample_params
+return(sample_params)
 }
-scenario_1 = list(name="constant_diffusion",
-		     description="Constant diffusionterm. Fixed sigma_eps=0.05 in the model. 
-		     		  Choosed Km between 2 and 7",
-                     model_H0=model_H0,
-                     model_H1=model_H1_const_diff,
-                     design = design,
-                     sample_params=sample_params,
-                     T_statistic=T_statistic,
-                     H0_drift=H0_drift,
-                     H1_drift=H1_drift)
 
-scenario_2 = list(name="linear_diff_test",
-		     description="Linear diffusionterm. Fixed sigma_eps=0.05 in the model. 
-		     		  Choosed Km between 2 and 7",
-                     model_H0=model_H0,
-                     model_H1=model_H1_linear_diff,
-                     design = design,
-                     sample_params=sample_params,
-                     T_statistic=T_statistic,
-                     H0_drift=H0_drift,
-                     H1_drift=H1_drift)
 
-models = c( c("H0" = model_H0, "H1"= model_H1_constant_diffusion, 
+models = list( list("H0" = model_H0, "H1"= model_H1_const_diffusion, 
 	      "desc" = "Constant diffusion term with sigma epsilon to fit", "shortcut" = "const_diff") ,
-	    c("H0" = model_H0, "H1"= model_H1_constant_diffusion,
+	      list("H0" = model_H0, "H1"= model_H1_linear_diffusion,
 	      "desc" = "Linear diffusion term with sigma epsilon to fit", "shortcut" = "linear_diff"))
 
-parameter_samplings = c(c("sampling" = get_parameter_sampling(low_var), "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is low_var",
-			  "shortcut" = 
-
+parameter_samplings = list(list("sampling" = get_parameter_sampling(low_noise),
+                          "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is low_var",
+			                    "shortcut" = "low_noise"))
+designs = list( list("design"=design_measure_at_first_dose,
+               "desc"= "Dosing at every day and measure shortly after and shortly before.
+               Additionaly measure some more points after the first dose",
+               "shortcut" = "measure_first_cycle"))
 
 if(test)
 {
-  n_simulations_typ1=100
-  n_simulations_typ2=200
+  suffix = "test"
+} else
+{
+  suffix="full"
+}
+scenarios = list()
+for( m in models)
+{
+  for(s in parameter_samplings)
+  {
+    for (d in designs)
+    { 
+      name = paste(m$shortcut, s$shortcut, d$shortcut, suffix, sep="+")
+      desc = paste(m$desc, s$desc, d$desc,  sep="::")
+      scenario = list(name=name,
+                      description=desc,
+                      model_H0=m$H0,
+                      model_H1=m$H1,
+                      design = d$design,
+                      sample_params=s$sampling,
+                      T_statistic=T_statistic,
+                      H0_drift=H0_drift,
+                      H1_drift=H1_drift)
+      scenarios[[name]] = scenario
+    }
+  }
+  
+}
+
+if(test)
+{
+  n_simulations_typ1=50
+  n_simulations_typ2=50
   n_samples=50
 
 } else
@@ -122,11 +137,11 @@ if(local)
 {
   path = "/localhome/tr"
 }
-scenarios = list(scenario_1, scenario_2)
+
 for(scenario in scenarios)
-{
+{ print(scenario$name)
   res = run_complete_scenario(scenario, path, n_simulations_typ1, n_simulations_typ2, n_samples, alpha = 0.05, h=0.02, TRUE)
-  print(scenario$name)
+ 
   print(eval_simulation(res[["type1"]]))
   print(eval_simulation(res[["type2"]]))
 }
