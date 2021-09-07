@@ -44,7 +44,9 @@ run_test = function(data, model_H0, model_H1, T_statistic, n_simulations, design
   return(list(rejected = emp_quantile < T_statistic(estimated_params_H1), H1_lh = H1_fit$f  ,na_samples= sum(is.na(T_samples)) ))
 }
 visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, h, path, name, draw_Km=FALSE)
-{
+{ 
+  for(k in 1:5)
+  {
   sampled_params = sample_params()
   data_obs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
   data_unobs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end,
@@ -55,7 +57,7 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
   print(estimated_params_H1)
   
   
-  pathH0 = file.path(path, paste(name,"visH0.png",sep="_"))
+  pathH0 = file.path(path, paste(name,str(k), "visH0.png",sep="_"))
   jpeg(file=pathH0)
   plot(data_obs[["t"]], data_obs[["ConcObserved"]],
        main="Sample experiment",
@@ -74,7 +76,7 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
     }
   dev.off()
   
-  pathH1 = file.path(path, paste(name,"visH1.png",sep="_"))
+  pathH1 = file.path(path, paste(name, str(k), "visH1.png",sep="_"))
   jpeg(file=pathH1)
   plot(data_obs[["t"]], data_obs[["ConcObserved"]],
        main="Sample experiment",
@@ -93,7 +95,7 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
           col=c("blue","green", "blue","brown"), lty=1:2, cex=1)
   
   dev.off()
-  
+  }
 }
 library(progress)
 run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statistic, sample_params, design, n_param_samples, n_simulations,log_path, h=0.1)
@@ -122,7 +124,8 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
     if(linux)
     {
       tmp_path = file.path("/tmp", paste("tmp", dummy, sep="_") )
-      dir.create(tmp_path)
+      
+      dir.create(tmp_path, showWarnings = FALSE)
       set.tempdir(tmp_path)
     }
     sampled_params = sample_params() 
@@ -136,7 +139,7 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
       {print(dummy)}
     if(linux)
     {
-      unlink(tmp_path)
+      unlink(tmp_path, recursive=TRUE)
     }
     
     return(list("res"=res, "params"=unlist(sampled_params,use.names=FALSE)))
@@ -153,9 +156,7 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
   	 res_vec[[i]] = res_list[[i]]$res$rejected
 	}
 	
-  }
-  
-  print(length(res_vec)) 
+  } 
   rec[["test_rejected"]] = as.integer(res_vec)
   return(rec)
  

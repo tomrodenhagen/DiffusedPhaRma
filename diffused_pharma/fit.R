@@ -61,32 +61,44 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
     
   estimate = function(data, n_retrys=10, full_info=FALSE)
     { 
-      invisible( capture.output( fit <- model$estimate(data) ) )
+      
+      best_fit = NULL
       for(k in 1:n_retrys)
-      {  
-        if(fit$info==0)
-	{if(fit$f < 500)
-          {
-	  break
+      { invisible( capture.output( fit <- model$estimate(data) ) ) 
+        if(is.null(best_fit))
+	{
+	 if(fit$info==0)
+	  {
+	   best_fit=fit
 	  }
+	}
+        else
+        {
+          if(fit$info==0)
+	{
+	 
+	 if(best_fit$f > fit$f)
+	  {
+	  best_fit=fit
+	  }
+		 
         }
-      	print(k)
-        if(k==n_retrys)
+     
+       
+        set_params(model,params, prior, bounds)
+       }
+      
+      }
+      if(is.null(best_fit)) 
 	{
 	 warning("Fitting algorithm didnt converged until last retry.")
-	 
 	 return(NULL)
 	}
-        set_params(model,params, prior, bounds)
-        invisible( capture.output( fit <- model$estimate(data) ) )
-
-      }
-      
-      res = as.list(fit$xm)
+      res = as.list(best_fit$xm)
       res[["Conc0"]] = transf(res[["Conc0"]])
       if(full_info)
-      {       fit[["res"]] = res
-	      return(fit)}
+      {       best_fit[["res"]] = res
+	      return(best_fit)}
       else
       {
       return(res)
