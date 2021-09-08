@@ -53,8 +53,6 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
                               1000, h=h, design$dosis)
   estimated_params_H0 = model_H0$estimate(data_obs)
   estimated_params_H1 = model_H1$estimate(data_obs)
-  print(estimated_params_H0)
-  print(estimated_params_H1)
   
   
   pathH0 = file.path(path, paste(name,toString(k), "visH0.png",sep="_"))

@@ -21,16 +21,16 @@ H1_drift =function(t, state, u, params){return(-params$CL * params$Km / (params$
 
 #Models to Fit
 model_H0 =  get_H0_model()
-model_H1_const_diffusion = get_H1_model(diffusion_term="CONST")
+model_H1_const_diffusion = get_H1_model(diffusion_term="CONSTANT")
 model_H1_linear_diffusion = get_H1_model(diffusion_term="LINEAR")
  
 model_H0_fixed_low_noise =  get_H0_model(low_noise)
-model_H1_const_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="CONST")
+model_H1_const_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="CONSTANT")
 model_H1_linear_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="LINEAR")
  
 model_H0_fixed_high_noise =  get_H0_model(high_noise)
-model_H1_const_diffusion_high_noise = get_H1_model(high_noise, diffusion_term="CONST")
-model_H1_linear_diffusion_high_noise = get_H1_model(high_noise, diffusion_term="LINEAR")
+model_H1_const_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="CONSTANT")
+model_H1_linear_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="LINEAR")
  
 
 
@@ -74,13 +74,25 @@ return(sample_params)
 
 
 models = list( list("H0" = model_H0, "H1"= model_H1_const_diffusion, 
-	      "desc" = "Constant diffusion term with sigma epsilon to fit", "shortcut" = "const_diff") ,
-	      list("H0" = model_H0, "H1"= model_H1_linear_diffusion,
-	      "desc" = "Linear diffusion term with sigma epsilon to fit", "shortcut" = "linear_diff"))
+	       "desc" = "Constant diffusion term with sigma epsilon to fit", "shortcut" = "const_diff") ,
+	       list("H0" = model_H0, "H1"= model_H1_linear_diffusion,
+	       "desc" = "Linear diffusion term with sigma epsilon to fit", "shortcut" = "linear_diff"),
+	       list("H0" = model_H0_fixed_low_noise, "H1"= model_H1_const_diffusion_fixed_low_noise,
+		   "desc" = "Constant diffusion term with fixed low sigma", "shortcut" = "const_diff_fixed_low_noise"),
+	       list("H0" = model_H0_fixed_low_noise, "H1"= model_H1_linear_diffusion_fixed_low_noise,
+		   "desc" = "Linear diffusion term with fixed low sigma", "shortcut" = "linear_diff_fixed_low_noise"),
+	      list("H0" = model_H0_fixed_high_noise, "H1"= model_H1_const_diffusion_fixed_high_noise,
+                   "desc" = "Constant diffusion term with fixed high sigma", "shortcut" = "const_diff_fixed_high_noise"),
+	       list("H0" = model_H0_fixed_high_noise, "H1"= model_H1_linear_diffusion_fixed_high_noise,
+                   "desc" = "Linear diffusion term with fixed high sigma", "shortcut" = "linear_diff_fixed_high_noise"))
 
-parameter_samplings = list(list("sampling" = get_parameter_sampling(low_noise),
-                          "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is low_var",
-			                    "shortcut" = "low_noise"))
+parameter_samplings = list( list("sampling" = get_parameter_sampling(low_noise),
+                                 "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is high variance",
+			         "shortcut" = "low_noise"),
+			    list("sampling" = get_parameter_sampling(high_noise),
+                                 "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is high variance",
+                                 "shortcut" = "high_noise")
+			   )
 designs = list( list("design"=design_measure_at_first_dose,
                "desc"= "Dosing at every day and measure shortly after and shortly before.
                Additionaly measure some more points after the first dose",
