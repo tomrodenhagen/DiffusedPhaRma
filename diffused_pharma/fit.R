@@ -44,7 +44,7 @@ set_params = function(model, params, prior, bounds)
   }
 }
 
-build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list(), observation_equation=ConcObserved ~ Conc, transf=identity)
+build_model = function(equation, drift, diffusion, params, prior=list(), bounds=list(), observation_equation=ConcObserved ~ Conc, transf=identity, n_retrys=10)
 { 
   model <- ctsm$new()
   model$addSystem(equation)
@@ -59,7 +59,7 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
   model$setVariance(ConcObserved ~ sigma_eps)
   set_params(model,params, prior, bounds)
     
-  estimate = function(data, n_retrys=10, full_info=FALSE)
+  estimate = function(data, full_info=FALSE)
     { 
       
       best_fit = NULL
@@ -123,14 +123,15 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
 	       "prior" = prior,
 	       "bounds" = bounds,
 	       "transf"= transf,
-	       "observation_equation" = observation_equation
+	       "observation_equation" = observation_equation,
+	       "n_retrys" = n_retrys
                   )
   return(myModel)
 }
 copy_model = function(model)
-{
+{ 
   return(build_model(model$equation, model$drift, 
 		     model$diffusion, model$params, 
 		     model$prior, model$bounds, 
-		      model$observation_equation, model$transf))
+		      model$observation_equation, model$transf, model$n_retrys))
 }

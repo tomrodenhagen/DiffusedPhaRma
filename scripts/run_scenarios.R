@@ -6,6 +6,13 @@ options(error=traceback)
 test = TRUE
 local = .Platform$OS.type != "unix"
 n_days = 15
+if(test)
+{
+ n_retries=1
+} else
+{
+ n_retries=10
+}
 #Some base arguments
 
 low_noise = 0.01
@@ -20,17 +27,17 @@ H1_drift =function(t, state, u, params){return(-params$CL * params$Km / (params$
 
 
 #Models to Fit
-model_H0 =  get_H0_model()
-model_H1_const_diffusion = get_H1_model(diffusion_term="CONSTANT")
-model_H1_linear_diffusion = get_H1_model(diffusion_term="LINEAR")
+model_H0 =  get_H0_model(n_retrys=n_retries)
+model_H1_const_diffusion = get_H1_model(diffusion_term="CONSTANT", n_retrys=n_retries)
+model_H1_linear_diffusion = get_H1_model(diffusion_term="LINEAR", n_retrys=n_retries)
  
-model_H0_fixed_low_noise =  get_H0_model(low_noise)
-model_H1_const_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="CONSTANT")
-model_H1_linear_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="LINEAR")
+model_H0_fixed_low_noise =  get_H0_model(low_noise, n_retrys=n_retries)
+model_H1_const_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="CONSTANT", n_retrys=n_retries)
+model_H1_linear_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="LINEAR", n_retrys=n_retries)
  
-model_H0_fixed_high_noise =  get_H0_model(high_noise)
-model_H1_const_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="CONSTANT")
-model_H1_linear_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="LINEAR")
+model_H0_fixed_high_noise =  get_H0_model(high_noise, n_retrys=n_retries)
+model_H1_const_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="CONSTANT", n_retrys=n_retries)
+model_H1_linear_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="LINEAR", n_retrys=n_retries)
  
 
 
@@ -105,29 +112,6 @@ if(test)
 {
   suffix="full"
 }
-scenarios = list()
-for( m in models)
-{
-  for(s in parameter_samplings)
-  {
-    for (d in designs)
-    { 
-      name = paste(m$shortcut, s$shortcut, d$shortcut, suffix, sep="+")
-      desc = paste(m$desc, s$desc, d$desc,  sep="::")
-      scenario = list(name=name,
-                      description=desc,
-                      model_H0=m$H0,
-                      model_H1=m$H1,
-                      design = d$design,
-                      sample_params=s$sampling,
-                      T_statistic=T_statistic,
-                      H0_drift=H0_drift,
-                      H1_drift=H1_drift)
-      scenarios[[name]] = scenario
-    }
-  }
-  
-}
 
 if(test)
 {
@@ -149,12 +133,37 @@ if(local)
 {
   path = "/localhome/tr"
 }
-
-for(scenario in scenarios)
-{ print(scenario$name)
-  res = run_complete_scenario(scenario, path, n_simulations_typ1, n_simulations_typ2, n_samples, alpha = 0.05, h=0.02, TRUE)
+res_agg = list()
+for( m in models)
+{
+  for(s in parameter_samplings)
+  {
+    for (d in designs)
+    { 
+      name = paste(m$shortcut, s$shortcut, d$shortcut, suffix, sep="+")
+      desc = paste(m$desc, s$desc, d$desc,  sep="::")
+      scenario = list(name=name,
+                      description=desc,
+                      model_H0=m$H0,
+                      model_H1=m$H1,
+                      design = d$design,
+                      sample_params=s$sampling,
+                      T_statistic=T_statistic,
+                      H0_drift=H0_drift,
+                      H1_drift=H1_drift)
+      res = run_complete_scenario(scenario, path, n_simulations_typ1, n_simulations_typ2, n_samples, alpha = 0.05, h=0.02, TRUE)
+      eval_res_typ1 = eval_simulation(res$type1)
+      eval_res_typ2 = eval_simulation(res$type2)
+      print(eval_res_typ1)
+      print(eval_res_typ2)
+      row = list("Model" = m$shortcut, "Parameter" = s$shortcut, "Design" = d$shortcut,"Emp. Typ 1 Fehler" =eval_res_typ1$rej, "Empirische Power" =  eval_res_typ2$rej)
+      res_agg[[name]] = row
+      
+    }
+  }
  
-  print(eval_simulation(res[["type1"]]))
-  print(eval_simulation(res[["type2"]]))
 }
+df = do.call(rbind, res_agg)
+rownames(df) = NULL
+print(df)
 

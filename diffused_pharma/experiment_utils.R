@@ -164,7 +164,7 @@ library(matrixStats)
 eval_simulation = function(rec_with_na, path=NULL, name=NULL )
 { n_not_valid = sum(is.na(rec_with_na$test_rejected))
   rec = rec_with_na[!is.na(rec_with_na$test_rejected),]
-  res_evaluated = list("Percentages of rejected tests"=mean(rec$test_rejected), "Number of not valid tests" = n_not_valid ) 
+  res_evaluated = list("rej"=mean(rec$test_rejected), "not_valid" = n_not_valid ) 
   if(!is.null(path))
   {  
 	write(toJSON(res_evaluated), 
@@ -174,14 +174,14 @@ eval_simulation = function(rec_with_na, path=NULL, name=NULL )
   na_per_Km = aggregate(is.na(rec_with_na$test_rejected), by=list(Km=rec_with_na$Km), FUN=mean) 
 
   if(!is.null(path))
-{ print(means_per_Km)
-  print(na_per_Km)
+{ 
   jpeg(file.path(path, paste(name , "per_parameter.jpeg", sep = "_"))) 
 }
   plot(means_per_Km, main=paste(name, "_vs_Km",sep=""),xlab="Km",ylab="Percentage of rejected tests")
   text = paste("~", nrow(rec) / nrow(means_per_Km), "per group")
   mtext(text, side = 1, line = 6, cex = 0.8, adj = 0) 
   dev.off()
+  res_evaluated[["per_km"]] = means_per_Km
   return(res_evaluated)
  }
 run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Masterarbeit", n_tests_typ1 = 500,n_tests_typ2=500, n_samples=500, alpha = 0.05, h=0.02, fresh=TRUE)
