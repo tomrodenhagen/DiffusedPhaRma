@@ -1,14 +1,16 @@
 source("diffused_pharma/experiment_utils.R")
+source("diffused_pharma/run_utils.R")
 source("scripts/fixtures/models.R")
 sink(stdout(), type="message")
 options(error=traceback)
+
 #Some script params
 test = TRUE
 local = .Platform$OS.type != "unix"
 n_days = 15
 if(test)
 {
- n_retries=1
+ n_retries=4
 } else
 {
  n_retries=10
@@ -115,9 +117,9 @@ if(test)
 
 if(test)
 {
-  n_simulations_typ1=50
-  n_simulations_typ2=50
-  n_samples=50
+  n_simulations_typ1= 200
+  n_simulations_typ2=200
+  n_samples=200
 
 } else
 {
@@ -128,42 +130,17 @@ if(test)
 }
 if(local)
 {
-  path = "C:/Users/roden/Documents/data"
+  base_path = "C:/Users/roden/Documents/data"
 } else
 {
-  path = "/localhome/tr"
+  base_path = "/localhome/tr/runs"
 }
-res_agg = list()
-for( m in models)
-{
-  for(s in parameter_samplings)
-  {
-    for (d in designs)
-    { 
-      name = paste(m$shortcut, s$shortcut, d$shortcut, suffix, sep="+")
-      desc = paste(m$desc, s$desc, d$desc,  sep="::")
-      scenario = list(name=name,
-                      description=desc,
-                      model_H0=m$H0,
-                      model_H1=m$H1,
-                      design = d$design,
-                      sample_params=s$sampling,
-                      T_statistic=T_statistic,
-                      H0_drift=H0_drift,
-                      H1_drift=H1_drift)
-      res = run_complete_scenario(scenario, path, n_simulations_typ1, n_simulations_typ2, n_samples, alpha = 0.05, h=0.02, TRUE)
-      eval_res_typ1 = eval_simulation(res$type1)
-      eval_res_typ2 = eval_simulation(res$type2)
-      print(eval_res_typ1)
-      print(eval_res_typ2)
-      row = list("Model" = m$shortcut, "Parameter" = s$shortcut, "Design" = d$shortcut,"Emp. Typ 1 Fehler" =eval_res_typ1$rej, "Empirische Power" =  eval_res_typ2$rej)
-      res_agg[[name]] = row
-      
-    }
-  }
- 
-}
-df = do.call(rbind, res_agg)
-rownames(df) = NULL
-print(df)
-
+config = list(name = "generic_combination", 
+          fresh = TRUE,
+	  base_path = base_path,
+	  n_simulations_typ1 = n_simulations_typ1,
+	  n_simulations_typ2=n_simulations_typ2,
+	  n_samples=n_samples,
+          alpha = 0.05,
+          h = 0.02)  
+run_scenarios(models, designs, parameter_samplings, config)

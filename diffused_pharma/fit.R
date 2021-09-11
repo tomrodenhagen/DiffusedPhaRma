@@ -61,10 +61,10 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
     
   estimate = function(data, full_info=FALSE)
     { 
-      
       best_fit = NULL
-      for(k in 1:n_retrys)
-      { invisible( capture.output( fit <- model$estimate(data) ) ) 
+      for(k in 0:n_retrys)
+      {
+	invisible( capture.output( fit <- model$estimate(data) ) ) 
         if(is.null(best_fit))
 	{
 	 if(fit$info==0)
@@ -76,9 +76,9 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
         {
           if(fit$info==0)
 	{
-	 
-	 if(best_fit$f > fit$f)
+         if(best_fit$f > fit$f)
 	  {
+          
 	  best_fit=fit
 	  }
 		 
@@ -97,6 +97,7 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
       res = as.list(best_fit$xm)
       res[["Conc0"]] = transf(res[["Conc0"]])
       if(full_info)
+
       {       best_fit[["res"]] = res
 	      return(best_fit)}
       else
