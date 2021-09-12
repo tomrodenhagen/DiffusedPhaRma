@@ -214,8 +214,9 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
   cat(scenario$description,file=file.path(folders$scenario_folder,"description.txt"),sep="\n")
   #some standart parameters, we might change that at a later point
   diffusion = function(t, state, u , params){return(0)}
-  #Visualize 
-  visualize_setting(scenario$H0_drift,
+  #Visualize
+  if(fresh | !file.exists( file.path(folders$typ1_folder, "visH0.png") ) )
+  { visualize_setting(scenario$H0_drift,
                     diffusion, 
                     scenario$model_H0, 
                     scenario$model_H1,
@@ -225,6 +226,9 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
                     h, 
                     folders$typ1_folder, 
                     ) 
+	      }
+  if(fresh | !file.exists( file.path(folders$typ1_folder, "visH1.png") ) )
+  {
   visualize_setting(scenario$H1_drift,
                     diffusion, 
                     scenario$model_H0, 
@@ -235,7 +239,8 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
                     h, 
                     folders$typ2_folder,
                     draw_Km = TRUE) 
-  #Type 1 Error
+   } 
+#Type 1 Error
   
   res_path = file.path(folders$typ1_folder, "complete_res.csv")
   if(file.exists(res_path) & !fresh)

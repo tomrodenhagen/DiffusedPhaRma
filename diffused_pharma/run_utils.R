@@ -10,23 +10,23 @@ init_experiment_folder = function(config)
   return(experiment_folder)
 }
 get_run_number = function(run_folder)
-{       if(is.null(run_folder))
+{  if(is.null(run_folder))
 	{
 	 return(0)
          }
-	
-	info = read_json(file.path(run_folder, "info.json"))
-	return(info$run_number)
+   info = read_json(file.path(run_folder, "info.json"))
+   return(as.integer(info$run_number))
 }
 
 get_last_run_folder = function(experiment_folder)
 {
- run_folders = list.files(path=experiment_folder, full.names = T)
+ run_folders = list.dirs(path=experiment_folder, full.names = T, recursive=FALSE)
  if(length(run_folders) == 0)
  {
    return(NULL)
  }
- run_numbers = lapply(run_folders, get_run_number)
+ 
+ run_numbers = sapply(run_folders, get_run_number)
  return(run_folders[which.max(run_numbers)])
 }
 
@@ -34,7 +34,7 @@ init_run_folder= function(experiment_folder, run_number, config)
 {
  folder_name = paste("run", run_number, sep="_") 
  folder_path = file.path(experiment_folder, folder_name)
- dir.create( folder_path)
+ dir.create(folder_path)
  info_json = list("run_number" = run_number)
  write_json(info_json, 
 	  file.path(folder_path, "info.json") )
@@ -43,7 +43,7 @@ init_run_folder= function(experiment_folder, run_number, config)
 }
 
 prepare_run_folder = function(experiment_folder, config)
-{ 
+{
   last_run_folder = get_last_run_folder(experiment_folder)
   if(config$fresh | is.null(last_run_folder) )
   {
@@ -82,7 +82,7 @@ run_scenarios = function(models, designs, parameter_samplings, config)
       res = run_complete_scenario(scenario, working_folder, config$n_simulations_typ1, config$n_simulations_typ2, config$n_samples, alpha = config$alpha, h=config$h, config$fresh)
       eval_res_typ1 = eval_simulation(res$type1)
       eval_res_typ2 = eval_simulation(res$type2)
-      row = list("Model" = m$shortcut, "Parameter" = s$shortcut, "Design" = d$shortcut,"Emp. Typ 1 Fehler" =eval_res_typ1$rej, "Empirische Power" =  eval_res_typ2$rej)
+      row = list("Modell" = m$shortcut, "Parameter" = s$shortcut, "Design" = d$shortcut,"Emp. Typ 1 Fehler" =eval_res_typ1$rej, "Empirische Power" =  eval_res_typ2$rej)
       res_agg[[name]] = row
       
     }
@@ -91,6 +91,10 @@ run_scenarios = function(models, designs, parameter_samplings, config)
  df = do.call(rbind, res_agg)
  rownames(df) = NULL
  write.csv(x=df, file=paste(working_folder, "/run_scenarios_res.csv", sep="") )
+ print(xtable(df, type = "latex",digits=c(0,0,0,3,3,3)),
+      file = paste(working_folder,"run_scenarios_res.tex"),
+      include.rownames = FALSE,
+      floating=FALSE)
 }	
 
 

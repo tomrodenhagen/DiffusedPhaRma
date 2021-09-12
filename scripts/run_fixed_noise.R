@@ -10,7 +10,7 @@ local = .Platform$OS.type != "unix"
 n_days = 15
 if(test)
 {
- n_retries=4
+ n_retries=0
 } else
 {
  n_retries=10
@@ -18,7 +18,8 @@ if(test)
 #Some base arguments
 
 low_noise = 0.01
-high_noise = 0.05
+medium_noise = 0.05
+high_noise = 0.1
 
 #Fixtures
 T_statistic = function(estimate){return(estimate$sigma_tau)[0]}
@@ -36,7 +37,12 @@ model_H1_linear_diffusion = get_H1_model(diffusion_term="LINEAR", n_retrys=n_ret
 model_H0_fixed_low_noise =  get_H0_model(low_noise, n_retrys=n_retries)
 model_H1_const_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="CONSTANT", n_retrys=n_retries)
 model_H1_linear_diffusion_fixed_low_noise = get_H1_model(low_noise, diffusion_term="LINEAR", n_retrys=n_retries)
- 
+
+model_H0_fixed_medium_noise =  get_H0_model(medium_noise, n_retrys=n_retries)
+model_H1_const_diffusion_fixed_medium_noise = get_H1_model(medium_noise, diffusion_term="CONSTANT", n_retrys=n_retries)
+model_H1_linear_diffusion_fixed_medium_noise = get_H1_model(medium_noise, diffusion_term="LINEAR", n_retrys=n_retries)
+  
+
 model_H0_fixed_high_noise =  get_H0_model(high_noise, n_retrys=n_retries)
 model_H1_const_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="CONSTANT", n_retrys=n_retries)
 model_H1_linear_diffusion_fixed_high_noise = get_H1_model(high_noise, diffusion_term="LINEAR", n_retrys=n_retries)
@@ -93,14 +99,22 @@ models = list( list("H0" = model_H0, "H1"= model_H1_const_diffusion,
 	      list("H0" = model_H0_fixed_high_noise, "H1"= model_H1_const_diffusion_fixed_high_noise,
                    "desc" = "Constant diffusion term with fixed high sigma", "shortcut" = "const_diff_fixed_high_noise"),
 	       list("H0" = model_H0_fixed_high_noise, "H1"= model_H1_linear_diffusion_fixed_high_noise,
-                   "desc" = "Linear diffusion term with fixed high sigma", "shortcut" = "linear_diff_fixed_high_noise"))
+                   "desc" = "Linear diffusion term with fixed high sigma", "shortcut" = "linear_diff_fixed_high_noise"),
+	       list("H0" = model_H0_fixed_medium_noise, "H1"= model_H1_const_diffusion_fixed_medium_noise,
+                   "desc" = "Constant diffusion term with fixed medium sigma", "shortcut" = "const_diff_fixed_medium_noise"),
+	       list("H0" = model_H0_fixed_medium_noise, "H1"= model_H1_linear_diffusion_fixed_medium_noise,
+                   "desc" = "Linear diffusion term with fixed medium sigma", "shortcut" = "linear_diff_fixed_medium_noise"))
 
 parameter_samplings = list( list("sampling" = get_parameter_sampling(low_noise),
-                                 "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is high variance",
+                                 "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is low variance",
 			         "shortcut" = "low_noise"),
+			    list("sampling" = get_parameter_sampling(medium_noise),
+                                 "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is medium variance",
+                                 "shortcut" = "medium_noise"),
 			    list("sampling" = get_parameter_sampling(high_noise),
                                  "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is high variance",
                                  "shortcut" = "high_noise")
+
 			   )
 designs = list( list("design"=design_measure_at_first_dose,
                "desc"= "Dosing at every day and measure shortly after and shortly before.
@@ -117,9 +131,9 @@ if(test)
 
 if(test)
 {
-  n_simulations_typ1= 200
-  n_simulations_typ2=200
-  n_samples=200
+  n_simulations_typ1= 50
+  n_simulations_typ2=50
+  n_samples=100
 
 } else
 {
@@ -135,7 +149,7 @@ if(local)
 {
   base_path = "/localhome/tr/runs"
 }
-config = list(name = "generic_combination", 
+config = list(name = "fixed_noise", 
           fresh = TRUE,
 	  base_path = base_path,
 	  n_simulations_typ1 = n_simulations_typ1,
