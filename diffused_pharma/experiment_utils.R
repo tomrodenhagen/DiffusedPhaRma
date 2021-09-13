@@ -49,6 +49,7 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
 { 
   sampled_params = sample_params()
   data_obs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end, design$n_samples, h=h, design$dosis)
+  sampled_params[["sigma_eps"]] = 0
   data_unobs = simulate_model(drift, diffusion, sampled_params, design$t_start, design$t_end,
                               1000, h=h, design$dosis)
   estimated_params_H0 = model_H0$estimate(data_obs)
@@ -58,8 +59,18 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
     return(NULL) 
   } 
   
-  pathH0 = file.path(path, "visH0.png")
+  path_only_design = file.path(path, "only_design.png")
   
+  jpeg(file=path_only_design)
+  plot(data_obs[["t"]], data_obs[["ConcObserved"]],
+       main="Sample experiment",
+       ylab="Drug concentration in mg /l",
+       xlab="time in days", pch=19,col="blue",cex=1.5) 
+  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green")
+  legend( x= "bottomright", legend=c("Observed points", "True"),
+  col=c("blue","green"), lty=1:2, cex=1,pch=19)
+  dev.off()
+  pathH0 = file.path(path, "visH0.png")
   jpeg(file=pathH0)
   plot(data_obs[["t"]], data_obs[["ConcObserved"]],
        main="Sample experiment",
@@ -67,6 +78,7 @@ visualize_setting= function(drift, diffusion, model_H0, model_H1, T_statistic, s
        xlab="time in days", pch=19,col="blue",cex=1.5) 
   lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green")
   
+	  
   
   data_H0 = model_H0$simulate(estimated_params_H0, design$t_start, design$t_end,300,  h=h, design$dosis)
   lines(data_H0[["t"]], data_H0[["ConcObserved"]], pch=2, col="red")

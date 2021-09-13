@@ -1,11 +1,11 @@
 library(jsonlite)
-
+library(xtable)
 
 
 
 init_experiment_folder = function(config)
-{
-  experiment_folder = file.path(config$base_path, config$name)
+{ name = paste(config$name, config$mode, sep="_")
+  experiment_folder = file.path(config$base_path, name)
   dir.create(experiment_folder)
   return(experiment_folder)
 }
@@ -68,7 +68,7 @@ run_scenarios = function(models, designs, parameter_samplings, config)
   {
     for (d in designs)
     { 
-      name = paste(m$shortcut, s$shortcut, d$shortcut, suffix, sep="+")
+      name = paste(m$shortcut, s$shortcut, d$shortcut, sep="+")
       desc = paste(m$desc, s$desc, d$desc,  sep="::")
       scenario = list(name=name,
                       description=desc,
@@ -92,7 +92,7 @@ run_scenarios = function(models, designs, parameter_samplings, config)
  rownames(df) = NULL
  write.csv(x=df, file=paste(working_folder, "/run_scenarios_res.csv", sep="") )
  print(xtable(df, type = "latex",digits=c(0,0,0,3,3,3)),
-      file = paste(working_folder,"run_scenarios_res.tex"),
+      file = file.path(working_folder,"res.tex"),
       include.rownames = FALSE,
       floating=FALSE)
 }	
