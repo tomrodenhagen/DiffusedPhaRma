@@ -68,4 +68,5 @@ get_H1_model = function(fixed_sigma_eps=NULL, diffusion_term = "CONSTANT", n_ret
 	return(model_H1)
 }
 
+ 
 

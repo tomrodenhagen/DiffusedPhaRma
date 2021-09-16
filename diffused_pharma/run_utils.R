@@ -29,7 +29,10 @@ get_last_run_folder = function(experiment_folder)
  run_numbers = sapply(run_folders, get_run_number)
  return(run_folders[which.max(run_numbers)])
 }
-
+is_finished = function(run_folder)
+{
+ return(list.files(path = run_folder, pattern = "\\.tex$"))
+}
 init_run_folder= function(experiment_folder, run_number, config)
 {
  folder_name = paste("run", run_number, sep="_") 
@@ -56,7 +59,34 @@ prepare_run_folder = function(experiment_folder, config)
   return(working_folder)
 }
 
+get_conf_string = function(res)
+{
+  return(paste( round(res$rej, 2) , 
+	"(", round(res$rej_lower,2), 
+	"," , round(res$rej_upper,2),
+	")",sep=""))
 
+}
+rename_shortcut = function(shortcut)
+{
+   renaming = list("const_diff" = "K",
+		   "linear_diff" = "L",
+		   "low_noise" = "Niedriger Noise",
+		   "medium_noise" = "Mittlere Noise",
+		   "high_noise" = "Hoher Noise",
+		   "measure_first_cycle" = "Messung nach 1. Dosis"
+		  )
+   renamed = renaming[[shortcut]]
+   if(is.null(renamed))
+   {
+	return(shortcut)
+   }
+   else
+   {
+    return(renamed) 
+   }
+
+}
 run_scenarios = function(models, designs, parameter_samplings, config)
 {
  experiment_folder = init_experiment_folder(config)
@@ -82,7 +112,12 @@ run_scenarios = function(models, designs, parameter_samplings, config)
       res = run_complete_scenario(scenario, working_folder, config$n_simulations_typ1, config$n_simulations_typ2, config$n_samples, alpha = config$alpha, h=config$h, config$fresh)
       eval_res_typ1 = eval_simulation(res$type1)
       eval_res_typ2 = eval_simulation(res$type2)
-      row = list("Modell" = m$shortcut, "Parameter" = s$shortcut, "Design" = d$shortcut,"Emp. Typ 1 Fehler" =eval_res_typ1$rej, "Empirische Power" =  eval_res_typ2$rej)
+      row = list("Modell" = rename_shortcut(m$shortcut), 
+		 "Parameter" = rename_shortcut(s$shortcut), 
+		 "Design" = rename_shortcut(d$shortcut),
+		 "Emp. Typ 1 Fehler" =get_conf_string(eval_res_typ1),
+		  "Emp. Power" =  get_conf_string(eval_res_typ2)
+		)
       res_agg[[name]] = row
       
     }
@@ -90,11 +125,11 @@ run_scenarios = function(models, designs, parameter_samplings, config)
  }
  df = do.call(rbind, res_agg)
  rownames(df) = NULL
- write.csv(x=df, file=paste(working_folder, "/run_scenarios_res.csv", sep="") )
- print(xtable(df, type = "latex",digits=c(0,0,0,3,3,3)),
-      file = file.path(working_folder,"res.tex"),
+ write.csv(x=df, file=paste(working_folder, "/res.csv", sep="") )
+ print(xtable(df, type = "latex"),
       include.rownames = FALSE,
-      floating=FALSE)
+      floating=FALSE,
+       file = file.path(working_folder, paste(config$name, "res.tex", sep="_")) )
 }	
 
 

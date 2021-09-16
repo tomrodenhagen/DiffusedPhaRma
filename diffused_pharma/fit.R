@@ -91,8 +91,7 @@ build_model = function(equation, drift, diffusion, params, prior=list(), bounds=
       }
       if(is.null(best_fit)) 
 	{
-	 warning("Fitting algorithm didnt converged until last retry.")
-	 return(NULL)
+	  return(NULL)
 	}
       res = as.list(best_fit$xm)
       res[["Conc0"]] = transf(res[["Conc0"]])

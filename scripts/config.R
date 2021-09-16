@@ -41,11 +41,20 @@ load_config = function(cmd_args)
    base_config$n_retries = 4
 
  }
+ if(s=="FULL_NO_RETRY")
+ {
+    base_config$n_simulations_typ1 =  100
+    base_config$n_simulations_typ2 = 200
+    base_config$n_samples = 200
+    base_config$n_retries = 0
+
+        }
+
   if(s=="FULL_EXT")
  {
    base_config$n_simulations_typ1 =  200
-   base_config$n_simulations_typ2 = 500
-   base_config$n_samples = 500
+   base_config$n_simulations_typ2 = 1000
+   base_config$n_samples = 200
    base_config$n_retries = 4
 
  }

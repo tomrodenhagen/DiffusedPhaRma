@@ -38,8 +38,8 @@ model_H1_linear_diffusion = get_H1_model(diffusion_term="LINEAR", n_retrys=n_ret
 
 
 dosis = get_n_dosis(n_days, 250)
-design_measure_at_first_dose_many_samples = list(t_start=0, t_end = n_days, n_samples=get_samples(n_days, sampling="MANY"), dosis = dosis )
-design_measure_at_first_dose_few_samples = list(t_start=0, t_end = n_days, n_samples=get_samples(n_days, sampling="FEW"), dosis = dosis )
+design_measure_at_6th_dose = list(t_start=0, t_end = n_days, n_samples=get_samples(n_days, 6), dosis = dosis )
+design_measure_at_3th_dose = list(t_start=0, t_end = n_days, n_samples=get_samples(n_days, 3), dosis = dosis )
 
 
 models = list( list("H0" = model_H0, "H1"= model_H1_const_diffusion, 
@@ -58,17 +58,17 @@ parameter_samplings = list( list("sampling" = get_parameter_sampling(low_noise),
 
 			   )
 designs = list( 
-	       list("design"=design_measure_at_first_dose_many_samples,
+	       list("design"=design_measure_at_3th_dose,
                "desc"= "Dosing at every day and measure shortly after and shortly before.
-               Additionaly measure some many points after the first dose",
-               "shortcut" = "measure_first_cycle_many_samples"),
-	      list("design"=design_measure_at_first_dose_few_samples,
+               Additionaly measure some many points after the third dose",
+               "shortcut" = "measure_3th_cycle"),
+	      list("design"=design_measure_at_6th_dose,
 		   "desc"= "Dosing at every day and measure shortly after and shortly before.
-		            Additionaly measure some few points after the first dose",
-	             "shortcut" = "measure_first_cycle_few_samples")
+		            Additionaly measure some few points after the 6th dose",
+		   "shortcut" = "measure_6th_cylce")
 	       )
 
 
 
-config$name = "diff_measurements"
+config$name = "diff_cycles"
 run_scenarios(models, designs, parameter_samplings, config)

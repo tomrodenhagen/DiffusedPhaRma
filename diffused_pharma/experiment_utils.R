@@ -145,13 +145,7 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
     model_H1_copy=copy_model(model_H1)
     res = run_test(data, model_H0_copy, model_H1_copy, T_statistic, n_simulations, design, alpha, h)
     
-    if(dummy%%50==0)
-      {
-       print(dummy)
-       write(toJSON(res),
-	     file.path(log_path, paste("test_res", dummy, sep="_") ))
-      }
-    if(linux)
+        if(linux)
     {
       unlink(tmp_path, recursive=TRUE)
     }
@@ -176,10 +170,18 @@ run_simulation_study = function(drift, diffusion, model_H0, model_H1, T_statisti
  
 }
 library(matrixStats)
+binconf = function(k,n, alpha=0.05)
+{ #Use normal distributin approximation
+  p = k / n
+  b = (p*(1-p) / n)**0.5 * qnorm(1 - alpha / 2)
+  return(list("Upper" = p + b, "Lower" = p - b))
+  
+}
 eval_simulation = function(rec_with_na, path=NULL, name=NULL )
 { n_not_valid = sum(is.na(rec_with_na$test_rejected))
   rec = rec_with_na[!is.na(rec_with_na$test_rejected),]
-  res_evaluated = list("rej"=mean(rec$test_rejected), "not_valid" = n_not_valid ) 
+  conf = binconf(sum(rec$test_rejected), length(rec$test_rejected) )
+  res_evaluated = list("rej"=mean(rec$test_rejected),"rej_upper"=conf$Upper, "rej_lower"=conf$Lower, "not_valid" = n_not_valid ) 
   if(!is.null(path))
   {  
 	write(toJSON(res_evaluated), 
