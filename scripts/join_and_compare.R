@@ -1,0 +1,19 @@
+source("diffused_pharma/experiment_utils.R")
+source("diffused_pharma/run_utils.R")
+source("scripts/fixtures/models.R")
+source("scripts/fixtures/parameters.R")
+source("scripts/config.R")
+sink(stdout(), type="message")
+options(error=traceback)
+
+options <- commandArgs(trailingOnly = TRUE)
+config1 = load_config(options)
+config2 = load_config(options)
+config1$mode = "FULL_VERY_EXT"
+config2$mode = "FULL_EXT"
+join_and_compare("base", "diff_cycles", config1, config1)
+join_and_compare("base", "fixed_noise", config1, config2)
+join_and_compare("base", "diff_measurements", config1,config2)
+
+
+
