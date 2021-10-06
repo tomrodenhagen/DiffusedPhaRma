@@ -78,4 +78,4 @@ designs = list( list("design"=design_measure_at_first_dose,
                Additionaly measure some more points after the first dose",
                "shortcut" = "measure_first_cycle"))
 config$name = "base"
-run_scenarios(models, designs, parameter_samplings, config)
+run_scenarios(models, designs, parameter_samplings, config, TRUE)

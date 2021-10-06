@@ -174,31 +174,43 @@ binconf = function(k,n, alpha=0.05)
 { #Use normal distributin approximation
   p = k / n
   b = (p*(1-p) / n)**0.5 * qnorm(1 - alpha / 2)
-  return(list("Upper" = p + b, "Lower" = p - b))
-  
+  return(list("Point" = p, "Upper" = p + b, "Lower" = p - b, "N_samples"=n))
+ 
 }
+conf_per_group = function(x, g)
+{
+ ks = aggregate(x, by=list(g), FUN=sum)
+ ns = aggregate(x, by=list(g), FUN=length)
+ res = list()
+ for(i in rownames(ns))
+{    conf = binconf(ks[i,"x"], ns[i,"x"])
+     conf[["group"]] = ks[i,1]
+     res[[i]] = conf
+ }
+ 
+ res = as.data.frame(do.call(rbind, res))
+ res$group = as.numeric(res$group)
+ res$Point = as.numeric(res$Point)
+ res$Lower = as.numeric(res$Lower)
+ res$Upper = as.numeric(res$Upper)
+ res$N_samples = as.numeric(res$N_samples)
+
+
+ return(res)
+}
+
 eval_simulation = function(rec_with_na, path=NULL, name=NULL )
 { n_not_valid = sum(is.na(rec_with_na$test_rejected))
   rec = rec_with_na[!is.na(rec_with_na$test_rejected),]
   conf = binconf(sum(rec$test_rejected), length(rec$test_rejected) )
-  res_evaluated = list("rej"=mean(rec$test_rejected),"rej_upper"=conf$Upper, "rej_lower"=conf$Lower, "not_valid" = n_not_valid ) 
+  res_evaluated = list("Point"=mean(rec$test_rejected),"Upper"=conf$Upper, "Lower"=conf$Lower, "not_valid" = n_not_valid ) 
   if(!is.null(path))
   {  
 	write(toJSON(res_evaluated), 
 	      file.path(path,paste(name , "eval.csv", sep = "_")))
   }
-  means_per_Km = aggregate(rec$test_rejected, by=list(Km=rec$Km), FUN=mean) 
-  na_per_Km = aggregate(is.na(rec_with_na$test_rejected), by=list(Km=rec_with_na$Km), FUN=mean) 
-
-  if(!is.null(path))
-{ 
-  jpeg(file.path(path, paste(name , "per_parameter.jpeg", sep = "_"))) 
-}
-  plot(means_per_Km, main=paste(name, "_vs_Km",sep=""),xlab="Km",ylab="Percentage of rejected tests")
-  text = paste("~", nrow(rec) / nrow(means_per_Km), "per group")
-  mtext(text, side = 1, line = 6, cex = 0.8, adj = 0) 
-  dev.off()
-  res_evaluated[["per_km"]] = means_per_Km
+  conf_per_Km = conf_per_group(rec$test_rejected, rec$Km)
+  res_evaluated[["per_km"]] = conf_per_Km
   return(res_evaluated)
  }
 
