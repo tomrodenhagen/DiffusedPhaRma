@@ -332,12 +332,12 @@ print_aggregated_results = function(res, recent_res_folder, config)
  {
    df_list[[design]] = add_significance(df_typ2[df_typ2$Design==design,], fixed_design = design)
  }
- df_typ2_model = do.call(rbind, df_list)
+ df_typ2_model = as.data.frame(do.call(rbind, df_list))
  
  rownames(df_typ2_design) = NULL
  rownames(df_typ2_model) = NULL
  
- df_typ1 = do.call(rbind, res_agg_typ1)
+ df_typ1 = as.data.frame(do.call(rbind, res_agg_typ1))
 
  
  rownames(df_typ1) = NULL
