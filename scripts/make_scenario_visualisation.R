@@ -70,7 +70,7 @@ vis_different_cycles = function(cycle)
   design= list(t_start=0, t_end = n_days, n_samples=get_samples(n_days, cycle), dosis = dosis ) 
   data_obs = simulate_model(drift, diff, parameter, design$t_start, design$t_end , n_samples = design$n_samples, dosis = design$dosis, h=0.01 )
   plot(data_obs[["t"]], data_obs[["ConcObserved"]],
-       main= paste("Measure in interval", cycle),
+       main= paste("Measure in interval", cycle + 1),
        ylab="Drug concentration in mg /l",
        xlab="time in days", pch=19,col="blue",cex=1.5,type = "n") 
   data_unobs = simulate_model(drift, diff, parameter_no_noise, design$t_start, design$t_end , n_samples = 300, dosis = design$dosis, h=0.01 )
