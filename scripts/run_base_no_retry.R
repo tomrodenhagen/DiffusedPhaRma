@@ -58,9 +58,9 @@ design_measure_at_first_dose = list(t_start=0, t_end = n_days, n_samples=get_sam
 
 
 models = list( list("H0" = model_H0, "H1"= model_H1_const_diffusion, 
-	       "desc" = "Constant diffusion term with sigma epsilon to fit", "shortcut" = "const_diff") ,
+	       "desc" = "Constant diffusion term with sigma epsilon to fit", "shortcut" = "const_diff_no_retry") ,
 	       list("H0" = model_H0, "H1"= model_H1_linear_diffusion,
-	       "desc" = "Linear diffusion term with sigma epsilon to fit", "shortcut" = "linear_diff"))
+	       "desc" = "Linear diffusion term with sigma epsilon to fit", "shortcut" = "linear_diff_no_retry"))
 parameter_samplings = list( list("sampling" = get_parameter_sampling(low_noise),
                                  "desc" = "Uniform sampling of Km between 3 and 9,  CL=1.75, V=50 and sigma_eps is low variance",
 			         "shortcut" = "low_noise"),
@@ -76,5 +76,5 @@ designs = list( list("design"=design_measure_at_first_dose,
                "desc"= "Dosing at every day and measure shortly after and shortly before.
                Additionaly measure some more points after the first dose",
                "shortcut" = "measure_first_cycle"))
-config$name = "base"
+config$name = "base_no_retry"
 run_scenarios(models, designs, parameter_samplings, config, TRUE)

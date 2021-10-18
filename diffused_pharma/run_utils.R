@@ -94,12 +94,14 @@ rename_shortcut = function(shortcut, invert=FALSE)
 {
    renaming = list("const_diff" = "$\\sigma_\\tau dW$",
 		   "linear_diff" = "$C \\cdot \\sigma_\\tau dW$",
-		   "low_noise" = "$\\sigma_\\epsilon = 0.01$",
-		   "medium_noise" = "$\\sigma_\\epsilon = 0.05$",
-		   "high_noise" = "$\\sigma_\\epsilon = 0.1$",
-		   "const_diff_fixed_low_noise" = "$\\sigma_\\tau dW$,Fix. $\\sigma_\\epsilon = 0.01$",
-		   "const_diff_fixed_medium_noise" = "$\\sigma_\\tau dW$,Fix. $\\sigma_\\epsilon = 0.05$",
-                   "const_diff_fixed_high_noise" = "$\\sigma_\\tau dW$,Fix. $\\sigma_\\epsilon = 0.1$",
+		   "const_diff_no_retry" = "$\\sigma_\\tau dW$, kein Multistart",
+		   "linear_diff_no_retry" = "$C \\cdot \\sigma_\\tau dW$, kein Multistart",
+		   "low_noise" = "$\\sigma_\\epsilon^2 = 0.01$",
+		   "medium_noise" = "$\\sigma_\\epsilon^2 = 0.05$",
+		   "high_noise" = "$\\sigma_\\epsilon^2 = 0.1$",
+		   "const_diff_fixed_low_noise" = "$\\sigma_\\tau dW$,Fix. $\\sigma_\\epsilon^2 = 0.01$",
+		   "const_diff_fixed_medium_noise" = "$\\sigma_\\tau dW$,Fix. $\\sigma_\\epsilon^2 = 0.05$",
+                   "const_diff_fixed_high_noise" = "$\\sigma_\\tau dW$,Fix. $\\sigma_\\epsilon^2 = 0.1$",
 		   "measure_first_cycle" = "$k=1, n=6$",
 		   "measure_3th_cycle" = "$k=4, n = 6$",
 		   "measure_6th_cylce" = "$k=7, n= 6$",
@@ -220,7 +222,7 @@ make_typ2_res_row = function(m,s,d,res,n_sim)
     col_name  = paste("$K_m$=", km_table[i,"group"], sep="")
     row[[col_name]] = list("Point"=km_table[i,"Point"],"Lower"=km_table[i,"Lower"],"Upper"=km_table[i,"Upper"], "N_samples" = km_table[i,"N_samples"])
     }
-  row[["Nicht konv. Typ2"]] = paste(round(res[["not_valid"]] / n_sim* 100,1), "\\%")   
+  row[["Nicht konv. Typ-II"]] = paste(round(res[["not_valid"]] / n_sim* 100,1), "\\%")   
   }
   
   return(row)
@@ -253,7 +255,7 @@ add_significance = function(df_typ2, fixed_model="const_diff", fixed_design="mea
   fixed_design = rename_shortcut(fixed_design)
   df_fixed = df_typ2[df_typ2$Design==fixed_design & df_typ2$Modell == fixed_model,]
   
-  if(nrow(df_fixed)==0)
+  if(nrow(df_fixed)==0 | nrow(df_fixed)==nrow(df_typ2))
   { 
     return(make_pretty_res(df_typ2))
   }
@@ -341,7 +343,8 @@ print_aggregated_results = function(res, recent_res_folder, config)
  rownames(df_typ1) = NULL
  
  df_typ2_design = order_df(df_typ2_design)
- 
+ df_typ2_model = order_df(df_typ2_model)
+ df_typ1 = order_df(df_typ1)
  print(xtable(df_typ2_design, type = "latex"),
       include.rownames = FALSE,
       floating=FALSE,
@@ -423,10 +426,10 @@ get_aggregated_results = function(models, designs, parameter_samplings, working_
       res_agg_typ1[[name]] = list("Modell" = rename_shortcut(m$shortcut), 
 		 "Parameter" = rename_shortcut(s$shortcut), 
 		 "Design" = rename_shortcut(d$shortcut),
-		 "Emp. Typ 1 Fehler" =get_conf_string(eval_res_typ1$Point,
+		 "Emp. Typ-I Fehler" =get_conf_string(eval_res_typ1$Point,
 						      eval_res_typ1$Lower,
 						      eval_res_typ1$Upper),
-		  "Nichtkonv. Prozent Typ1" = paste(eval_res_typ1[["not_valid"]] /config$n_simulations_typ1 * 100, "\\%")
+		  "Nicht konv.Typ-I" = paste(eval_res_typ1[["not_valid"]] /config$n_simulations_typ1 * 100, "\\%")
 		 
 		)
              

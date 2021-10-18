@@ -269,9 +269,10 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
 #Type 1 Error
   
   res_path = file.path(folders$typ1_folder, "complete_res.csv")
+  
   if(file.exists(res_path) & !fresh)
   {
- 	  
+    
   res_type_1 = readRDS(file=res_path)
   } else
  {print("Run type1 testing...")
@@ -285,13 +286,13 @@ run_complete_scenario = function(scenario, path = "C:/Users/roden/Dropbox/Master
   saveRDS(res_type_1, file=res_path ) 
 
  }
- 
+  
   eval_simulation(res_type_1, folders$scenario_folder, "typ1_res")
   #Type 2 error
   res_path = file.path(folders$typ2_folder, "complete_res.csv")
 
    if(file.exists(res_path) & !fresh)
-  {
+   {
   res_type_2 = readRDS(file=res_path)
   } else
  {print("Running type 2 testing...")

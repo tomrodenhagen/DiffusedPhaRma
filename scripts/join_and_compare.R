@@ -10,10 +10,11 @@ options <- commandArgs(trailingOnly = TRUE)
 config1 = load_config(options)
 config2 = load_config(options)
 config1$mode = "FULL_VERY_EXT"
-config2$mode = "FULL_EXT"
+config2$mode = "FULL_NO_RETRY"
 join_and_compare("base", "diff_cycles", config1, config1)
-join_and_compare("base", "fixed_noise", config1, config2)
-join_and_compare("base", "diff_measurements", config1,config2)
+join_and_compare("base", "fixed_noise", config1, config1)
+join_and_compare("base", "diff_measurements", config1,config1)
+join_and_compare("base", "base_no_retry", config1,config2)
 
 
 
