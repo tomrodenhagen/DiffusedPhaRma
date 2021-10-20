@@ -43,9 +43,9 @@ vis_sigma_eps = function(sigma_eps)
   
   lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green",lwd = 3
       )
-  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]] + qnorm(0.99,0, sigma_eps), pch=1, col="red",lwd = 1
+  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]] + qnorm(0.95, 0 , sigma_eps**0.5), pch=1, col="red",lwd = 1
   )
-  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]] - qnorm(0.99,0,sigma_eps), pch=1, col="red",lwd = 1
+  lines(data_unobs[["t"]], data_unobs[["ConcObserved"]] - qnorm(0.95, 0 , sigma_eps**0.5), pch=1, col="red",lwd = 1
   )
   lines(data_unobs[["t"]], data_unobs[["ConcObserved"]], pch=1, col="green",lwd = 1
   )
