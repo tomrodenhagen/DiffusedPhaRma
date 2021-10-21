@@ -27,6 +27,7 @@ get_H0_model = function(fixed_sigma_eps=NULL, n_retrys=10)
                        params=list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
                        bounds= list("sigma_eps"= sigma_eps_init,
 				    "sigma_tau"= list("init"= 0.0000001),
+				    "Conc0"= list("init"= exp(-5)),
                                    "V"= list("init"= 10, "lower" = 0, "upper" = 100)),
 		       n_retrys=n_retrys
 			)
@@ -43,6 +44,7 @@ get_H1_model = function(fixed_sigma_eps=NULL, diffusion_term = "CONSTANT", n_ret
                        diffusion = function(t, state, u , params){return(0)},
                        params=list("Conc0","CL", "sigma_eps","sigma_tau", "V"),
                        bounds= list("sigma_eps"= sigma_eps_init,
+				    "Conc0"= list("init"= exp(-5)),
                                    "V"= list("init"= 10, "lower" = 0, "upper" = 100)),
 		        n_retrys=n_retrys
                         )
