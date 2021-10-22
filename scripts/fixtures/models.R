@@ -1,7 +1,7 @@
 source("diffused_pharma/experiment_utils.R")
 
 
-
+#Some helpers for building models
 
 get_sigma_eps_init = function(fixed_sigma_eps)
 {
